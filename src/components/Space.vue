@@ -28,14 +28,14 @@ export default {
             stats: null,
             geos_building: [],
             prevIsPedestrian: false,
+            intersection_colliders: [],
         }
     },
     mounted(){
         this.Awake()
 
-        const that = this
-
         //when user resizes window
+        const that = this
         window.addEventListener('resize', onWindowResize, false)
         function onWindowResize(){
             that.camera.aspect = window.innerWidth / window.innerHeight
@@ -53,7 +53,7 @@ export default {
 	            y: - ( e.clientY / window.innerHeight ) * 2 + 1,
             }
 
-            const hitObject = that.FireRaycaster(pointer)
+            const hitObject = this.FireRaycaster(pointer)
             if(hitObject["props"]){
                 this.scene.add(hitObject)
             }
@@ -62,13 +62,12 @@ export default {
     watch : {
         intersections: {
             handler(val, oldVal){
-                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0xff4300 } );
+                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } );
+                const nodes = []                
 
-                const nodes = []
-                
                 for(let intersection of this.intersections.values()){
                     const coords = this.GPSRelativePosition(intersection.coords, this.CENTER)
-                    const geometry = new THREE.BoxGeometry( .02, 0.2, .02 );
+                    const geometry = new THREE.SphereGeometry( 0.05, 13, 13 );
                     geometry.translate(coords[0],0,coords[1])
                     nodes.push(geometry)
                 }
@@ -76,13 +75,35 @@ export default {
                 const mergedGeometry = BufferGeometryUtils.mergeGeometries(nodes) 
                 mergedGeometry.rotateZ(Math.PI)
                 const mesh = new THREE.Mesh(mergedGeometry, MAT_NODE)
+                mesh.name = "intersections"
+
+                //Remove old intersections if they exist
+                const selectedObject = this.scene.getObjectByName("intersections");
+                if(selectedObject){
+                    this.scene.remove( selectedObject );
+                }
+                //Add new intersections
                 this.scene.add(mesh)
             },
             deep: true,
         },
-    },
-    updated(){
+        isPedestrian: {
+            handler(val, oldVal){
+                if(val != oldVal){
+                    if(val){
+                        const selectedObject = this.scene.getObjectByName("Roads");
+                        this.scene.remove( selectedObject );
+                        this.scene.add(this.iR_footpaths)
+                    }
+                    else {
+                        const selectedObject = this.scene.getObjectByName("Footpaths");
+                        this.scene.remove( selectedObject );
+                        this.scene.add(this.iR_roads)
+                    }
+                }
+            }
 
+        },
     },
     methods: {
         Awake(){
@@ -128,7 +149,7 @@ export default {
             this.scene.add(light2)
 
             const gridHelper = new THREE.GridHelper(60, 150, new THREE.Color(0x555555), new THREE.Color(0x333333))
-            this.scene.add(gridHelper)
+            //this.scene.add(gridHelper)
 
             //init renderer
             this.renderer = new THREE.WebGLRenderer({antialias: true})
@@ -216,10 +237,9 @@ export default {
             }
 
             //Add buildings to scene
-            const that = this
             this.$nextTick(()=>{
-                const mergedGeometry = BufferGeometryUtils.mergeGeometries(that.geos_building) 
-                const mesh = new THREE.Mesh(mergedGeometry, that.MAT_BUILDING)
+                const mergedGeometry = BufferGeometryUtils.mergeGeometries(this.geos_building) 
+                const mesh = new THREE.Mesh(mergedGeometry, this.MAT_BUILDING)
                 this.iR.add(mesh)
             })
 

@@ -13,7 +13,7 @@
                 <app-button button-text="GO" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick"/>
             </div>
         </div>
-        <space :isPedestrian="this.isWalkingSelected" :intersections="this.intersections" @sendHighwayData="handleHighwayData" />
+        <space :isPedestrian="isWalkingSelected" :intersections="intersections" @sendHighwayData="handleHighwayData" />
     </div>
 </template>
 
@@ -48,17 +48,23 @@ export default {
             isWalkingSelected: false,
             algorithm: null,
             highwayData: null,
-            intersections: null,
-            roadData: null,
-            footpathData: null,
-            roadIntersections: new Map(),
-            footpathIntersections: new Map(),
+            roadIntersections: null,
+            footpathIntersections: null,
         }
     },
     computed: {
         isRunDisabled(){
             return this.intersections == null
-        }
+        },
+        intersections(){
+            if(this.isWalkingSelected && this.footpathIntersections){
+                return this.footpathIntersections
+            }
+            else if(!this.isWalkingSelected && this.roadIntersections){
+                return this.roadIntersections
+            }
+            return null
+        },
     },
     methods: {
         handleRoadButtonClicked(){
@@ -102,8 +108,6 @@ export default {
                 intersectionWorker.onmessage = (e) => {
                     this.roadIntersections = e.data.roadIntersections? e.data.roadIntersections : null
                     this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : null
-
-                    this.intersections = this.isWalkingSelected? this.roadIntersections : this.footpathIntersections
                 }
             }
         },  
