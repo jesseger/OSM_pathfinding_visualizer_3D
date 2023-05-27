@@ -5,8 +5,6 @@
 </script>
 
 <template>
-  <!--<AppButton />-->
-  <!--<Space /> -->
   <Pathfinder />
 </template>
 
