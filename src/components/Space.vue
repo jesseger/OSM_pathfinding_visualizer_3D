@@ -184,9 +184,8 @@ export default {
          * Turns OSM data JSON into 3D model
          * @param {json} data GeoJSON file retrieved through Overpass API
          */
-        LoadGeoData(data){ 
-            let roadData = {} 
-            let footpathData = {}  
+        LoadGeoData(data){
+            const highwayData = {} 
 
             let features = data.features
             for(let i=0;i<features.length;i++){
@@ -197,22 +196,24 @@ export default {
                     this.addBuilding(fel.geometry.coordinates, fel.properties)
                 }
                 else if(fel.properties["highway"] && fel.geometry.type == "LineString"){
+                    let isRoad=false, isFootpath=false
                     if(!["pedestrian","path","bridleway","cycleway","footway","footway","track"].includes(fel.properties.highway)){
                         this.addHighway(fel.geometry.coordinates, fel.properties, true)
-                        roadData[fel.properties["@id"]] = new Float32Array(fel.geometry.coordinates.flat())
+                        isRoad=true
                     }
                     if(!["motorway","bridleway","cycleway"].includes(fel.properties.highway) ){
                         this.addHighway(fel.geometry.coordinates, fel.properties, false)
-                        footpathData[fel.properties["@id"]] = new Float32Array(fel.geometry.coordinates.flat())
+                        isFootpath=true
+                    }
+                    if(isRoad || isFootpath){
+                        highwayData[fel.properties["@id"]] = {
+                            array: new Float32Array(fel.geometry.coordinates.flat()),
+                            isRoad: isRoad,
+                            isFootpath: isFootpath,
+                        }
                     }
                 }
             }
-
-            //Send highway data to pathfinder
-            this.$emit("sendHighwayData", {
-                roadData: roadData,
-                footpathData: footpathData,
-            })
 
             //Add buildings to scene
             const that = this
@@ -221,6 +222,8 @@ export default {
                 const mesh = new THREE.Mesh(mergedGeometry, that.MAT_BUILDING)
                 this.iR.add(mesh)
             })
+
+            this.$emit("sendHighwayData", highwayData)
         },
         /**
          * Takes coordinates and metainformation of a highway (e.g. road, sidewalk) and turns it into 3D line
