@@ -1,6 +1,6 @@
 <template>
     <div>
-        <button id="main" v-on="$listeners"> {{ buttonText }}</button>
+        <button id="main" v-on="$listeners" :disabled="isDisabled"> {{ buttonText }}</button>
         <component v-if="isOpen" v-for="buttonItem in secondaryButtonList" v-bind:keys="buttonItem.id">
             <button @click="handleButton(buttonItem.text)">{{buttonItem.text}}</button>
         </component>
@@ -11,6 +11,7 @@
 
 export default {
     props: {
+        isDisabled: Boolean,
         buttonText: {
             type: String,
             default: () => "Click me"

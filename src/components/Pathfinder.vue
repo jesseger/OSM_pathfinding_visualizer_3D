@@ -10,7 +10,7 @@
             @a-star="handleAStarClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
             </div>
             <div>
-                <app-button button-text="GO" :isOpen="false" @click="handleComputeClick"/>
+                <app-button button-text="GO" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick"/>
             </div>
         </div>
         <space :isPedestrian="this.isWalkingSelected" :intersections="this.intersections" @sendHighwayData="handleHighwayData" />
@@ -53,6 +53,11 @@ export default {
             footpathData: null,
             roadIntersections: new Map(),
             footpathIntersections: new Map(),
+        }
+    },
+    computed: {
+        isRunDisabled(){
+            return this.intersections == null
         }
     },
     methods: {
