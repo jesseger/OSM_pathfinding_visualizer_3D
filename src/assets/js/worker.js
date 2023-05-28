@@ -1,5 +1,5 @@
-var roadIntersections = new Map()
-var footpathIntersections = new Map()
+var roadIntersections = new Map() //Format: map[[x,y]] = Set(way1, way2, (way3),...)
+var footpathIntersections = new Map() //Format: map[[x,y]] = Set(way1, way2, (way3),...)
 
 onmessage = (e) => {
     console.log("Worker started")
@@ -32,7 +32,7 @@ function computeLineIntersections(data){
             const isFootpath = data[i_key].isFootpath && data[j_key].isFootpath
             //Only have to compute intersection if lines are either both road or both footpath
             if(isRoad || isFootpath){
-                numIntersections = this.getLineIntersection(linePoints1, linePoints2, i_key, j_key, isRoad, isFootpath, numIntersections)
+                numIntersections = getLineIntersection(linePoints1, linePoints2, i_key, j_key, isRoad, isFootpath, numIntersections)
             }
             
         }
@@ -48,7 +48,7 @@ function computeLineIntersections(data){
  * Therefore, I did not want to simply return the first one
  * @param {Float32Array} linePoints1 Points of first line, x- and z-coordinates alternating
  * @param {Float32Array} linePoints2 Points of second line, x- and z-coordinates alternating
- * @param {string} key1 Key of first line, only needed to 
+ * @param {string} key1 Key of first line
  * @param {string} key2 Key of second line
  * @param {boolean} isRoad Whether these points belong to a road
  * @param {boolean} isFootpath Whether these points belong to a footpath
@@ -67,22 +67,35 @@ function getLineIntersection(linePoints1, linePoints2, key1, key2, isRoad, isFoo
             const D_x = linePoints2[n-1]
             const D_z = linePoints2[n]
 
-            const intersection = this.getLineSegmentIntersection(A_x,A_z,B_x,B_z,C_x,C_z,D_x,D_z)
+            const intersection = getLineSegmentIntersection(A_x,A_z,B_x,B_z,C_x,C_z,D_x,D_z)
             
             if(intersection){
                 if(isRoad){
-                    roadIntersections.set(numIntersections,{
-                        coords: intersection,
-                        way1: key1,
-                        way2: key2
-                    })
+                    const intersectingRoadsSet = roadIntersections.get(intersection.toString())
+                    if(!intersectingRoadsSet){
+                        //If this point is new, make a new Set of ways for it
+                        s = new Set([key1,key2])
+                        roadIntersections.set(intersection.toString(),s)
+                        
+                    }
+                    else{
+                        //Add both IDs to this point's Set of ways
+                        intersectingRoadsSet.add(key1)
+                        intersectingRoadsSet.add(key2)
+                    }
                 }
                 if(isFootpath){
-                    footpathIntersections.set(numIntersections,{
-                        coords:intersection,
-                        way1: key1,
-                        way2: key2
-                    })
+                    const intersectingFootpathsSet = footpathIntersections.get(intersection.toString())
+                    if(!intersectingFootpathsSet){
+                        //If this point is new, make a new Set of ways for it
+                        s = new Set([key1,key2])
+                        footpathIntersections.set(intersection.toString(),s)
+                    }
+                    else{
+                        //Add both IDs to this point's Set of ways
+                        intersectingFootpathsSet.add(key1)
+                        intersectingFootpathsSet.add(key2)
+                    }
                 }
                 numIntersections++ 
             }

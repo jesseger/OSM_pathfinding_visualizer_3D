@@ -65,8 +65,8 @@ export default {
                 const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } );
                 const nodes = []                
 
-                for(let intersection of this.intersections.values()){
-                    const coords = this.GPSRelativePosition(intersection.coords, this.CENTER)
+                for(let stringCoords of this.intersections.keys()){
+                    const coords = this.GPSRelativePosition(stringCoords.split(','), this.CENTER)
                     const geometry = new THREE.SphereGeometry( 0.05, 13, 13 );
                     geometry.translate(coords[0],0,coords[1])
                     nodes.push(geometry)

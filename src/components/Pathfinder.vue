@@ -69,11 +69,9 @@ export default {
     methods: {
         handleRoadButtonClicked(){
             this.isRoadButtonOpen = !this.isRoadButtonOpen
-            console.log(`Road clicked, now open: ${this.isRoadButtonOpen}`)
         },
         handleAlgoButtonClicked(){
             this.isAlgoButtonOpen = !this.isAlgoButtonOpen
-            console.log(`Algo clicked, now open: ${this.isAlgoButtonOpen}`)
         },
         handleWalkingClick(){
             this.isWalkingSelected = true
@@ -101,7 +99,7 @@ export default {
         handleHighwayData(data){
             this.highwayData = data
 
-            if(window.Worker){
+            if(window.Worker){ //TODO else popup window, website unusable, buttons disabled
                 const intersectionWorker = new Worker('src/assets/js/worker.js')
                 intersectionWorker.postMessage(data)
 
@@ -112,7 +110,6 @@ export default {
             }
         },  
     }
-
 }
 </script>
 
