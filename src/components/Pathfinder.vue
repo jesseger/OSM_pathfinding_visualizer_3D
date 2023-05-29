@@ -13,7 +13,7 @@
                 <app-button button-text="GO" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick"/>
             </div>
         </div>
-        <space :isPedestrian="isWalkingSelected" :intersections="intersections" @sendHighwayData="handleHighwayData" />
+        <space :isPedestrian="isWalkingSelected" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords"/>
     </div>
 </template>
 
@@ -41,6 +41,7 @@ export default {
         algoButtons.push({id:'dijkstra',text: "Dijkstra"})
         
         return {
+            centerCoords: [6.08379, 50.77539],
             isRoadButtonOpen: false,
             isAlgoButtonOpen: false,
             roadButtons: roadButtons,
@@ -50,6 +51,8 @@ export default {
             highwayData: null,
             roadIntersections: null,
             footpathIntersections: null,
+            roadEdges: null,
+            footpathEdges: null,
         }
     },
     computed: {
@@ -62,6 +65,15 @@ export default {
             }
             else if(!this.isWalkingSelected && this.roadIntersections){
                 return this.roadIntersections
+            }
+            return null
+        },
+        edges(){
+            if(this.isWalkingSelected && this.footpathEdges){
+                return this.footpathEdges
+            }
+            else if(!this.isWalkingSelected && this.roadEdges){
+                return this.roadEdges
             }
             return null
         },
@@ -96,17 +108,26 @@ export default {
         handleComputeClick(){
             console.log("GO has been clicked")
         },
-        handleHighwayData(data){
-            this.highwayData = data
+        handleHighwayData(highwayData){
+            this.highwayData = highwayData
 
-            if(window.Worker){ //TODO else popup window, website unusable, buttons disabled
-                const intersectionWorker = new Worker('src/assets/js/worker.js')
-                intersectionWorker.postMessage(data)
+            if(window.Worker){ 
+                const graphWorker = new Worker('src/assets/js/worker.js', {type: "module"},)
+                graphWorker.postMessage({
+                    highwayData: highwayData,
+                    centerCoords: this.centerCoords.toString()
+                })
 
-                intersectionWorker.onmessage = (e) => {
+                graphWorker.onmessage = (e) => {
                     this.roadIntersections = e.data.roadIntersections? e.data.roadIntersections : null
                     this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : null
+                    this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
+                    this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
                 }
+            }
+            else{
+                //TODO popup window, buttons disabled
+                console.log("Background processes (web workers) not supported in this browser.")
             }
         },  
     }

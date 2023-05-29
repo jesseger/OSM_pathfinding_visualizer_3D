@@ -13,15 +13,21 @@ import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js'
 
 import Stats from 'three/addons/libs/stats.module.js';
 
+import { GPSRelativePosition } from '../assets/js/utils';
+
 export default {
     name: 'space',
     props:{
-        isPedestrian: false,
-        intersections: null,
+        isPedestrian: {
+            type: Boolean,
+            default: () => false
+        },
+        intersections: Object,
+        edges: Object,
+        centerCoords: Array,
     },
     data(){
         return{ 
-            CENTER: [6.08379, 50.77539],
             MAT_BUILDING: null,
             MAT_ROAD: null,
             MAT_FOOTPATH: null,
@@ -66,7 +72,7 @@ export default {
                 const nodes = []                
 
                 for(let stringCoords of this.intersections.keys()){
-                    const coords = this.GPSRelativePosition(stringCoords.split(','), this.CENTER)
+                    const coords = GPSRelativePosition(stringCoords.split(','), this.centerCoords)
                     const geometry = new THREE.SphereGeometry( 0.05, 13, 13 );
                     geometry.translate(coords[0],0,coords[1])
                     nodes.push(geometry)
@@ -83,7 +89,41 @@ export default {
                     this.scene.remove( selectedObject );
                 }
                 //Add new intersections
-                this.scene.add(mesh)
+                //this.scene.add(mesh) 
+            },
+            deep: true,
+        },
+        edges: {
+            handler(val, oldVal){
+                const MAT_EDGE = new THREE.LineBasicMaterial( { color: 0x68C0FC } );
+                const edges = []              
+                
+                const iR_edges = new THREE.Group()
+                iR_edges.name = "edges"
+
+                for(let node1 of this.edges.keys()){
+                    const coords1 = GPSRelativePosition(node1.split(','), this.centerCoords)
+                    for(let edge of this.edges.get(node1)){
+                        const coords2 = GPSRelativePosition(edge.neighbor.split(','), this.centerCoords)
+
+                        const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
+                        const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
+                        const geometry = new THREE.BufferGeometry().setFromPoints([point1, point2])
+                        geometry.rotateZ(Math.PI)
+
+                        const line = new THREE.Line(geometry, MAT_EDGE)
+                        iR_edges.add(line)
+                   	}
+                }       
+                
+                //Remove old edges if they exist
+                const selectedObject = this.scene.getObjectByName("edges");
+                if(selectedObject){
+                    this.scene.remove( selectedObject );
+                }
+                //Add new edges
+                this.scene.add(iR_edges) 
+            
             },
             deep: true,
         },
@@ -91,14 +131,14 @@ export default {
             handler(val, oldVal){
                 if(val != oldVal){
                     if(val){
-                        const selectedObject = this.scene.getObjectByName("Roads");
-                        this.scene.remove( selectedObject );
-                        this.scene.add(this.iR_footpaths)
+                        // const selectedObject = this.scene.getObjectByName("Roads");
+                        // this.scene.remove( selectedObject );
+                        // this.scene.add(this.iR_footpaths)
                     }
                     else {
-                        const selectedObject = this.scene.getObjectByName("Footpaths");
-                        this.scene.remove( selectedObject );
-                        this.scene.add(this.iR_roads)
+                        // const selectedObject = this.scene.getObjectByName("Footpaths");
+                        // this.scene.remove( selectedObject );
+                        // this.scene.add(this.iR_roads)
                     }
                 }
             }
@@ -128,11 +168,9 @@ export default {
             this.iR_footpaths = new THREE.Group()
             this.iR_footpaths.name = "Footpaths"
 
-            this.stored_roads = null
-
             this.$nextTick(()=>{
                 this.scene.add(this.iR)
-                this.scene.add(this.iR_roads)
+                //this.scene.add(this.iR_roads)
             })
 
             // init lights
@@ -148,7 +186,7 @@ export default {
             this.scene.add(light1)
             this.scene.add(light2)
 
-            const gridHelper = new THREE.GridHelper(60, 150, new THREE.Color(0x555555), new THREE.Color(0x333333))
+            //const gridHelper = new THREE.GridHelper(60, 150, new THREE.Color(0x555555), new THREE.Color(0x333333))
             //this.scene.add(gridHelper)
 
             //init renderer
@@ -262,7 +300,7 @@ export default {
                 if(!el[0] || !el[1]) return 
 
                 let elp = [el[0],el[1]]
-                elp = this.GPSRelativePosition(elp, this.CENTER)
+                elp = GPSRelativePosition(elp, this.centerCoords)
                 points.push(new THREE.Vector3(elp[0], 0, elp[1]))
             }
             const geometry = new THREE.BufferGeometry().setFromPoints(points)
@@ -290,9 +328,9 @@ export default {
             else if(["apartments","office","university","commercial"].includes(props["building"])) { height = 25*random}
 
             //generate shape and punch holes into it if necessary
-            const shape = this.genShape(coords[0], this.CENTER)
+            const shape = this.genShape(coords[0], this.centerCoords)
             for(let i=1;i<coords.length;i++){
-                const hole = this.genShape(coords[i], this.CENTER)
+                const hole = this.genShape(coords[i], this.centerCoords)
                 shape.holes.push(hole)
             }
 
@@ -337,7 +375,7 @@ export default {
             const shape = new THREE.Shape()
 
             for(let i=0; i<points.length;i++){
-                const elp = this.GPSRelativePosition(points[i], center)
+                const elp = GPSRelativePosition(points[i], center)
 
                 if(i==0){ shape.moveTo(elp[0], elp[1])}
                 else{ shape.lineTo(elp[0], elp[1])}
@@ -369,28 +407,6 @@ export default {
                 return false
             }
         },
-        /**
-         * Converts latitude/longitude points into 2D points in coordinate space
-         * This is necessary, as working directly with lat/long would cause distortion in some directions
-         * @param {array} objPos [lat, long] coordinates of a point
-         * @param {array} centerPos [lat, long] coordinates of (arbitrary) center point 
-         */
-        GPSRelativePosition(objPos, centerPos) {
-            // Get GPS distance
-            const dist = GEOLIB.getDistance(objPos, centerPos)
-
-            // Get bearing angle
-            const bearing = GEOLIB.getRhumbLineBearing(objPos, centerPos)
-
-            // Calculate X by centerPosi.x + distance * cos(rad)
-            const x = centerPos[0] + (dist * Math.cos(bearing * Math.PI / 180))
-
-            // Calculate Y by centerPosi.y + distance * sin(rad)
-            const y = centerPos[1] + (dist * Math.sin(bearing * Math.PI / 180))
-
-            // Reverse X
-            return [-x / 100, y / 100]
-        }
     }
 }
 </script>
