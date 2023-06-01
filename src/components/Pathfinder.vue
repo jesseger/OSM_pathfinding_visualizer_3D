@@ -13,7 +13,8 @@
                 <app-button button-text="GO" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick"/>
             </div>
         </div>
-        <space :isPedestrian="isWalkingSelected" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords"/>
+        <space :isPedestrian="isWalkingSelected" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
+        :centerCoords="centerCoords" :animationData="animationData" :shortestPath="shortestPath" />
     </div>
 </template>
 
@@ -21,7 +22,9 @@
 
 import Space from './Space.vue'
 import AppButton from './Button.vue'
+import { astar } from '../assets/js/astar.js'
 
+const timer = ms => new Promise(res => setTimeout(res, ms))
 
 export default {
     name: 'pathfinder',
@@ -53,11 +56,14 @@ export default {
             footpathIntersections: null,
             roadEdges: null,
             footpathEdges: null,
+            animationData: null,
+            animationSpeed: 10,
+            shortestPath: null,
         }
     },
     computed: {
         isRunDisabled(){
-            return this.intersections == null
+            return !this.roadEdges || !this.footpathEdges
         },
         intersections(){
             if(this.isWalkingSelected && this.footpathIntersections){
@@ -105,8 +111,24 @@ export default {
         handleDijkstraClick(){
             console.log("Dijkstra selected")
         },
-        handleComputeClick(){
+        async handleComputeClick(){
+        
             console.log("GO has been clicked")
+
+            const gen = astar(this.edges, "2.8046298858150776,-2.5492371645037935", "1.3794470347108203,9.736035392609828")
+
+            const start = Date.now()
+
+            for (let data of gen){
+                if(Array.isArray(data)){
+                    this.animationData = data  
+                } else{
+                    this.shortestPath = data.success? data.path : []
+                }        
+                await timer(this.animationSpeed)
+            }
+
+            console.log(`Compute took ${Date.now() - start} ms`)
         },
         handleHighwayData(highwayData){
             this.highwayData = highwayData

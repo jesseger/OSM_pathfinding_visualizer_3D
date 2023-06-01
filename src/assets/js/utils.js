@@ -22,3 +22,13 @@ export function GPSRelativePosition(objPos, centerPos) {
     // Reverse X
     return [-x / 100, y / 100]
 }
+
+/**
+ * Helper function that turns a string "x,y" into an array of floats [x,y].
+ * Necessary, since javascript keys can only be strings.
+ * @param {string} coordString 
+ * @returns {array} Array(2) of floats
+ */
+export function coordStringToArray(coordString){
+    return coordString.split(',').map((str) => parseFloat(str))
+}

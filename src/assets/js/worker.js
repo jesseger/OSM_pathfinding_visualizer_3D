@@ -1,4 +1,4 @@
-import { GPSRelativePosition } from './utils'
+import { GPSRelativePosition, coordStringToArray } from './utils'
 
 var roadIntersections = new Map() //Format: map["x,y"] = Set(way1, way2, (way3),...)
 var footpathIntersections = new Map() //Format: map["x,y"] = Set(way1, way2, (way3),...)
@@ -144,31 +144,22 @@ function addEdge([node1,node2], isRoad){
     const dist = Math.sqrt((coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2)
 
     //Store edges as "undirected" so we can get list of adjacent nodes in O(1)
-    const node1Edges = edgesMap.get(node1)
-    const node2Edges = edgesMap.get(node2)
+    const node1Edges = edgesMap.get(coords1.toString())
+    const node2Edges = edgesMap.get(coords2.toString())
 
     if(!node1Edges){
-        edgesMap.set(node1, [{dist: dist, neighbor: node2}])
+        edgesMap.set(coords1.toString(), [{dist: dist, neighbor: coords2.toString()}])
     }
     else {
-        node1Edges.push({dist: dist, neighbor: node2})
+        node1Edges.push({dist: dist, neighbor: coords2.toString()})
     }
 
     if(!node2Edges){
-        edgesMap.set(node2, [{dist: dist, neighbor: node1}])
+        edgesMap.set(coords2.toString(), [{dist: dist, neighbor: coords1.toString()}])
     }
     else {
-        node2Edges.push({dist: dist, neighbor: node1})
+        node2Edges.push({dist: dist, neighbor: coords1.toString()})
     }
-}
-/**
- * Helper function that turns a string "x,y" into an array of floats [x,y].
- * Necessary, since javascript keys can only be strings.
- * @param {string} coordString 
- * @returns {array} Array(2) of floats
- */
-function coordStringToArray(coordString){
-    return coordString.split(',').map((str) => parseFloat(str))
 }
 /**
  * Computes all intersections between highways

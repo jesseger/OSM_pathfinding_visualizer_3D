@@ -7,13 +7,12 @@
 <script>
 
 import * as THREE from 'three'
-import * as GEOLIB from 'geolib'
 import { MapControls } from 'three/addons/controls/MapControls.js';
 import * as BufferGeometryUtils from 'three/addons/utils/BufferGeometryUtils.js';
 
 import Stats from 'three/addons/libs/stats.module.js';
 
-import { GPSRelativePosition } from '../assets/js/utils';
+import { GPSRelativePosition, coordStringToArray } from '../assets/js/utils';
 
 export default {
     name: 'space',
@@ -25,6 +24,8 @@ export default {
         intersections: Object,
         edges: Object,
         centerCoords: Array,
+        animationData: Array,
+        shortestPath: Array,
     },
     data(){
         return{ 
@@ -72,7 +73,7 @@ export default {
                 const nodes = []                
 
                 for(let stringCoords of this.intersections.keys()){
-                    const coords = GPSRelativePosition(stringCoords.split(','), this.centerCoords)
+                    const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
                     const geometry = new THREE.SphereGeometry( 0.05, 13, 13 );
                     geometry.translate(coords[0],0,coords[1])
                     nodes.push(geometry)
@@ -95,16 +96,19 @@ export default {
         },
         edges: {
             handler(val, oldVal){
-                const MAT_EDGE = new THREE.LineBasicMaterial( { color: 0x68C0FC } );
-                const edges = []              
+
+                console.log(this.edges) 
                 
                 const iR_edges = new THREE.Group()
                 iR_edges.name = "edges"
 
                 for(let node1 of this.edges.keys()){
-                    const coords1 = GPSRelativePosition(node1.split(','), this.centerCoords)
+                    const coords1 = coordStringToArray(node1)
                     for(let edge of this.edges.get(node1)){
-                        const coords2 = GPSRelativePosition(edge.neighbor.split(','), this.centerCoords)
+
+                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: 0x1c4f46})
+                        const node2 = edge.neighbor 
+                        const coords2 = coordStringToArray(node2)
 
                         const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
                         const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
@@ -112,6 +116,7 @@ export default {
                         geometry.rotateZ(Math.PI)
 
                         const line = new THREE.Line(geometry, MAT_EDGE)
+                        line.name = [node1,node2].toString()
                         iR_edges.add(line)
                    	}
                 }       
@@ -142,7 +147,44 @@ export default {
                     }
                 }
             }
+        },
+        animationData: {
+            handler(val, oldVal){
+                //Add new edge to frontierEdge
+                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: 0xffdd80, gapSize: 0.05, dashSize: 0.02})     
 
+                const unvisitedEdge = this.scene.getObjectByName([val[0],val[1]].toString());
+                unvisitedEdge.computeLineDistances() 
+
+                unvisitedEdge.material = MAT_FRONTIER
+
+                //Edge that we took to currentNode is now visited
+                if(val[2]){
+
+                    const selectedEdge = this.scene.getObjectByName([val[2],val[0]].toString());
+
+                    const hFactor = 3
+                    const hBrightness = 100 - 80 * Math.min(hFactor / val[3], 1) //Change color based on h value of algorithm
+                    //const gBrightness = 50 + 50 * Math.min((1 / val[3]), 1)
+
+                    const COLOR_VISITED = new THREE.Color(`hsl(200, 100%, ${hBrightness}%)`)
+                    const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } ) //FFFFFF 0x68C0FC
+
+                    selectedEdge.material = MAT_VISITED
+                }
+            
+            },
+            deep: true,
+        },  
+        shortestPath: {
+            handler(val, oldVal){
+                for(let edge of this.shortestPath){
+                    const selectedEdge = this.scene.getObjectByName(edge.toString());
+                    const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: 0x47ff4a } )
+                    selectedEdge.material = MAT_SHORTEST
+                }
+            },
+            deep: true,
         },
     },
     methods: {
@@ -335,7 +377,7 @@ export default {
             }
 
             const geometry = this.genGeometry(shape, {curveSegments: 1, depth: 0.007 * height, bevelEnabled: false})
-            geometry.rotateX(Math.PI / 2) //TODO maybe rotate every single geometry at the end instead?
+            geometry.rotateX(Math.PI / 2) 
             geometry.rotateZ(Math.PI)
 
             this.geos_building.push(geometry)
@@ -343,7 +385,7 @@ export default {
             const helper = this.genHelper(geometry)
 
             if(helper){
-                helper.name = props["name"]? props["name"] : "Building" //TODO Maybe address as fallback
+                helper.name = props["name"]? props["name"] : "Building" 
                 helper.props = props
                 this.colliders.push(helper)
             }
