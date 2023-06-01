@@ -20,7 +20,6 @@ export function* astar(E, start, goal, heuristic=directDistance){
         const currentNode = openHeap.remove()
 
         if(currentNode === goal){
-            console.log(prev)
             let curr = currentNode
             const path = []
 

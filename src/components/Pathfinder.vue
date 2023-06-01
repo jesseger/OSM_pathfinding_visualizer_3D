@@ -14,7 +14,7 @@
             </div>
         </div>
         <space :isPedestrian="isWalkingSelected" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
-        :centerCoords="centerCoords" :animationData="animationData" :shortestPath="shortestPath" />
+        :centerCoords="centerCoords" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes"/>
     </div>
 </template>
 
@@ -59,11 +59,13 @@ export default {
             animationData: null,
             animationSpeed: 10,
             shortestPath: null,
+            selectedStart: null,
+            selectedGoal: null,
         }
     },
     computed: {
         isRunDisabled(){
-            return !this.roadEdges || !this.footpathEdges
+            return !this.roadEdges || !this.footpathEdges || !this.selectedStart || !this.selectedGoal 
         },
         intersections(){
             if(this.isWalkingSelected && this.footpathIntersections){
@@ -115,7 +117,7 @@ export default {
         
             console.log("GO has been clicked")
 
-            const gen = astar(this.edges, "2.8046298858150776,-2.5492371645037935", "1.3794470347108203,9.736035392609828")
+            const gen = astar(this.edges, this.selectedStart, this.selectedGoal)
 
             const start = Date.now()
 
@@ -152,6 +154,10 @@ export default {
                 console.log("Background processes (web workers) not supported in this browser.")
             }
         },  
+        handleSelectedNodes(data){
+            this.selectedStart = data.start
+            this.selectedGoal = data.goal
+        },
     }
 }
 </script>

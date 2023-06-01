@@ -35,7 +35,7 @@ export default {
             stats: null,
             geos_building: [],
             prevIsPedestrian: false,
-            intersection_colliders: [],
+            edgesMap: new Map(),
         }
     },
     mounted(){
@@ -61,43 +61,56 @@ export default {
             }
 
             const hitObject = this.FireRaycaster(pointer)
-            if(hitObject["props"]){
-                this.scene.add(hitObject)
+            if(hitObject){
+                if(!this.selectedStart){
+                    this.selectedStart = hitObject
+                    this.scene.add(hitObject)
+                }
+                else if(!this.selectedGoal){
+                    if(this.selectedStart == hitObject){
+                        this.selectedStart = null
+                        this.scene.remove(hitObject)
+                    } else{
+                        this.selectedGoal = hitObject
+                        this.scene.add(hitObject)
+                    }
+                }
+                else{
+                    if(this.selectedGoal == hitObject){
+                        this.selectedGoal = null
+                        this.scene.remove(hitObject)
+                    }
+                }
+                this.$emit('sendSelectedNodes', {
+                    start: this.selectedStart? this.selectedStart.name : null,
+                    goal: this.selectedGoal? this.selectedGoal.name : null,
+                })
+                console.log(this.selectedStart)
+                console.log(this.selectedGoal)
             }
         })
     },
     watch : {
         intersections: {
             handler(val, oldVal){
-                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } );
-                const nodes = []                
+                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } )             
 
                 for(let stringCoords of this.intersections.keys()){
                     const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
-                    const geometry = new THREE.SphereGeometry( 0.05, 13, 13 );
+                    const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
                     geometry.translate(coords[0],0,coords[1])
-                    nodes.push(geometry)
-                }
+                    geometry.rotateZ(Math.PI)
 
-                const mergedGeometry = BufferGeometryUtils.mergeGeometries(nodes) 
-                mergedGeometry.rotateZ(Math.PI)
-                const mesh = new THREE.Mesh(mergedGeometry, MAT_NODE)
-                mesh.name = "intersections"
+                    const sphere = new THREE.Mesh(geometry, MAT_NODE)
+                    sphere.name = coords.toString()
 
-                //Remove old intersections if they exist
-                const selectedObject = this.scene.getObjectByName("intersections");
-                if(selectedObject){
-                    this.scene.remove( selectedObject );
+                    this.intersection_colliders.push(sphere)
                 }
-                //Add new intersections
-                //this.scene.add(mesh) 
             },
             deep: true,
         },
         edges: {
             handler(val, oldVal){
-
-                console.log(this.edges) 
                 
                 const iR_edges = new THREE.Group()
                 iR_edges.name = "edges"
@@ -117,6 +130,7 @@ export default {
 
                         const line = new THREE.Line(geometry, MAT_EDGE)
                         line.name = [node1,node2].toString()
+                        this.edgesMap.set([node1,node2].toString(), line)
                         iR_edges.add(line)
                    	}
                 }       
@@ -153,15 +167,13 @@ export default {
                 //Add new edge to frontierEdge
                 const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: 0xffdd80, gapSize: 0.05, dashSize: 0.02})     
 
-                const unvisitedEdge = this.scene.getObjectByName([val[0],val[1]].toString());
+                const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
                 unvisitedEdge.computeLineDistances() 
-
                 unvisitedEdge.material = MAT_FRONTIER
 
                 //Edge that we took to currentNode is now visited
                 if(val[2]){
-
-                    const selectedEdge = this.scene.getObjectByName([val[2],val[0]].toString());
+                    const selectedEdge = this.edgesMap.get([val[2],val[0]].toString())
 
                     const hFactor = 3
                     const hBrightness = 100 - 80 * Math.min(hFactor / val[3], 1) //Change color based on h value of algorithm
@@ -258,7 +270,10 @@ export default {
 
             //init raycasting
             this.raycaster = new THREE.Raycaster()
-            this.colliders = []
+            this.intersection_colliders = []
+
+            this.selectedStart = null
+            this.selectedGoal = null
 
             this.Update()
 
@@ -352,7 +367,6 @@ export default {
             const randomMat = new THREE.LineBasicMaterial({color: randomColor})
             const line = new THREE.Line(geometry, randomMat)
             line.props = props
-            line.computeLineDistances()
 
             isRoad? this.iR_roads.add(line) : this.iR_footpaths.add(line)
             line.position.set(line.position.x, 0, line.position.z)
@@ -381,14 +395,6 @@ export default {
             geometry.rotateZ(Math.PI)
 
             this.geos_building.push(geometry)
-
-            const helper = this.genHelper(geometry)
-
-            if(helper){
-                helper.name = props["name"]? props["name"] : "Building" 
-                helper.props = props
-                this.colliders.push(helper)
-            }
         },
         /**
          * Wraps a bounding box helper around our object which we can use for visualization
@@ -435,13 +441,12 @@ export default {
             return geometry
         },
         /**
-         * Fires raycaster along the mouse pointer and returns first BoxHelper hit
+         * Fires raycaster along the mouse pointer and returns first intersection object hit
          * @param {object} pointer The x,y pointer defined by our mouse position
          */
         FireRaycaster(pointer){
             this.raycaster.setFromCamera(pointer, this.camera)
-            this.raycaster.params.Line.threshold = 0.01
-            let intersects = this.raycaster.intersectObjects(this.colliders, false)
+            const intersects = this.raycaster.intersectObjects(this.intersection_colliders, false)
             if(intersects.length>0){
                 return intersects[0].object
             } 
