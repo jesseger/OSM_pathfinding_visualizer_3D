@@ -1,4 +1,4 @@
-import { GPSRelativePosition, coordStringToArray } from './utils'
+import { coordStringToArray } from './utils'
 import { MinHeap } from './min-heap'
 
 export function* astar(E, start, goal, heuristic=directDistance){
@@ -18,6 +18,7 @@ export function* astar(E, start, goal, heuristic=directDistance){
     while(openHeap.getSize() > 0){
 
         const currentNode = openHeap.remove()
+        yield [currentNode, null, prev.get(currentNode), g.get(currentNode)]
 
         if(currentNode === goal){
             let curr = currentNode
@@ -52,7 +53,7 @@ export function* astar(E, start, goal, heuristic=directDistance){
                     openHeap.insert(neighbor)
                 }
 
-                yield [currentNode, neighbor, prev.get(currentNode), prev.get(currentNode)? h.get(prev.get(currentNode)) : 0]
+                yield [currentNode, neighbor, prev.get(currentNode), g.get(currentNode)]
             }
         }
     }

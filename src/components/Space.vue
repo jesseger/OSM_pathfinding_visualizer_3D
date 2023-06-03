@@ -26,6 +26,8 @@ export default {
         centerCoords: Array,
         animationData: Array,
         shortestPath: Array,
+        isWeightedAlgo: Boolean,
+        toggleResetScene: Boolean,
     },
     data(){
         return{ 
@@ -34,7 +36,6 @@ export default {
             MAT_FOOTPATH: null,
             stats: null,
             geos_building: [],
-            prevIsPedestrian: false,
             edgesMap: new Map(),
         }
     },
@@ -81,20 +82,16 @@ export default {
                         this.scene.remove(hitObject)
                     }
                 }
-                this.$emit('sendSelectedNodes', {
-                    start: this.selectedStart? this.selectedStart.name : null,
-                    goal: this.selectedGoal? this.selectedGoal.name : null,
-                })
-                console.log(this.selectedStart)
-                console.log(this.selectedGoal)
+                this.updateSelection()
             }
         })
     },
     watch : {
         intersections: {
             handler(val, oldVal){
-                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } )             
-
+                this.intersection_colliders = []
+                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } )    
+                
                 for(let stringCoords of this.intersections.keys()){
                     const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
                     const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
@@ -119,7 +116,7 @@ export default {
                     const coords1 = coordStringToArray(node1)
                     for(let edge of this.edges.get(node1)){
 
-                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: 0x1c4f46})
+                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: 0x204A44}) // teal: 0x0B9E8A, dark green: 0x1c4f46, #258578 #204A44
                         const node2 = edge.neighbor 
                         const coords2 = coordStringToArray(node2)
 
@@ -148,39 +145,35 @@ export default {
         },
         isPedestrian: {
             handler(val, oldVal){
-                if(val != oldVal){
-                    if(val){
-                        // const selectedObject = this.scene.getObjectByName("Roads");
-                        // this.scene.remove( selectedObject );
-                        // this.scene.add(this.iR_footpaths)
-                    }
-                    else {
-                        // const selectedObject = this.scene.getObjectByName("Footpaths");
-                        // this.scene.remove( selectedObject );
-                        // this.scene.add(this.iR_roads)
-                    }
-                }
+                this.resetSelection()
             }
         },
         animationData: {
             handler(val, oldVal){
                 //Add new edge to frontierEdge
-                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: 0xffdd80, gapSize: 0.05, dashSize: 0.02})     
+                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: 0xFFE921, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
 
-                const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
-                unvisitedEdge.computeLineDistances() 
-                unvisitedEdge.material = MAT_FRONTIER
+                if(val[1]){
+                    const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
+                    unvisitedEdge.computeLineDistances() 
+                    unvisitedEdge.material = MAT_FRONTIER
+                }                
 
                 //Edge that we took to currentNode is now visited
                 if(val[2]){
                     const selectedEdge = this.edgesMap.get([val[2],val[0]].toString())
 
-                    const hFactor = 3
-                    const hBrightness = 100 - 80 * Math.min(hFactor / val[3], 1) //Change color based on h value of algorithm
-                    //const gBrightness = 50 + 50 * Math.min((1 / val[3]), 1)
+                    let lightness
+                    if(this.isWeightedAlgo){
+                        const factor = 2
+                        lightness = 50 + 50 * Math.min((factor / val[3]), 1) //Color changes based on euclidean dist. to start
+                    }
+                    else {
+                        lightness = Math.max(50, 100 - 2*val[3])
+                    }
 
-                    const COLOR_VISITED = new THREE.Color(`hsl(200, 100%, ${hBrightness}%)`)
-                    const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } ) //FFFFFF 0x68C0FC
+                    const COLOR_VISITED = new THREE.Color(`hsl(18, 100%, ${lightness}%)`)
+                    const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } )
 
                     selectedEdge.material = MAT_VISITED
                 }
@@ -192,11 +185,16 @@ export default {
             handler(val, oldVal){
                 for(let edge of this.shortestPath){
                     const selectedEdge = this.scene.getObjectByName(edge.toString());
-                    const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: 0x47ff4a } )
+                    const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: 0x12B323 } ) // 0x47ff4a
                     selectedEdge.material = MAT_SHORTEST
                 }
             },
             deep: true,
+        },
+        toggleResetScene:{
+            handler(val, oldVal){
+                this.resetAnimation()
+            }
         },
     },
     methods: {
@@ -257,7 +255,8 @@ export default {
             this.controls.maxPolarAngle = Math.PI / 4
             this.controls.dampingFactor = 0.25
             this.controls.screenSpacePanning = false
-            this.controls.maxDistance = 800
+            this.controls.maxDistance = 20
+            this.controls.minDistance = 1
             this.controls.update()
 
             this.stats = new Stats()
@@ -335,7 +334,7 @@ export default {
             this.$nextTick(()=>{
                 const mergedGeometry = BufferGeometryUtils.mergeGeometries(this.geos_building) 
                 const mesh = new THREE.Mesh(mergedGeometry, this.MAT_BUILDING)
-                this.iR.add(mesh)
+                //this.iR.add(mesh) TODO uncomment, just seeing performance gains
             })
 
             this.$emit("sendHighwayData", highwayData)
@@ -453,6 +452,25 @@ export default {
             else{
                 return false
             }
+        },
+        resetAnimation(){
+            console.log("Reset animation called")
+            for(let [key, line] of this.edgesMap.entries()){
+                line.material = new THREE.LineBasicMaterial({ color: 0x204A44})
+            }
+        },
+        resetSelection(){
+            this.scene.remove(this.selectedStart)
+            this.scene.remove(this.selectedGoal)
+            this.selectedStart = null
+            this.selectedGoal = null
+            this.updateSelection()
+        },
+        updateSelection(){
+            this.$emit('sendSelectedNodes', {
+                start: this.selectedStart? this.selectedStart.name : null,
+                goal: this.selectedGoal? this.selectedGoal.name : null,
+            })
         },
     }
 }

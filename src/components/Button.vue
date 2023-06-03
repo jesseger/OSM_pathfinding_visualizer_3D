@@ -2,7 +2,7 @@
     <div>
         <button id="main" v-on="$listeners" :disabled="isDisabled"> {{ buttonText }}</button>
         <component v-if="isOpen" v-for="buttonItem in secondaryButtonList" v-bind:keys="buttonItem.id">
-            <button @click="handleButton(buttonItem.text)">{{buttonItem.text}}</button>
+            <button @click="handleButton(buttonItem.id)">{{buttonItem.text}}</button>
         </component>
     </div>
 </template>
