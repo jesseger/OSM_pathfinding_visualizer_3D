@@ -47,7 +47,7 @@ const vuetify = createVuetify({
   }
 })
 
-const app = createApp(App).use(vuetify) //TODO check
+const app = createApp(App).use(vuetify)
 
 app.use(createPinia())
 

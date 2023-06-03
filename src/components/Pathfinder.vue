@@ -7,7 +7,7 @@
             </div>
 
             <div id="building">
-                <app-button :icon="buildingButtonIcon"></app-button>
+                <app-button :icon="buildingButtonIcon" @click="handleBuildingButtonClicked"></app-button>
             </div>
 
             <div id="algo">
@@ -19,7 +19,7 @@
                 <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
             </div>
         </div>
-        <space :isPedestrian="isWalkingSelected" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
+        <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
         :centerCoords="centerCoords" :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes"
         :toggleResetScene="toggleResetScene"/> 
     </div>
@@ -123,6 +123,9 @@ export default {
         handleDrivingClick(){
             this.isWalkingSelected = false
             this.isRunning = false
+        },
+        handleBuildingButtonClicked(){
+            this.isBuildingsVisible = !this.isBuildingsVisible
         },
         handleAStarClick(){
             this.algorithm = 0

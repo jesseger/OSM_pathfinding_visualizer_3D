@@ -21,6 +21,7 @@ export default {
             type: Boolean,
             default: () => false
         },
+        isBuildingsVisible: Boolean,
         intersections: Object,
         edges: Object,
         centerCoords: Array,
@@ -196,6 +197,16 @@ export default {
                 this.resetAnimation()
             }
         },
+        isBuildingsVisible:{
+            handler(val, oldVal){
+                if(val){
+                    this.scene.add(this.iR)
+                }
+                else{
+                    this.scene.remove(this.iR)
+                }
+            }
+        },
     },
     methods: {
         Awake(){
@@ -222,7 +233,6 @@ export default {
 
             this.$nextTick(()=>{
                 this.scene.add(this.iR)
-                //this.scene.add(this.iR_roads)
             })
 
             // init lights
@@ -334,7 +344,7 @@ export default {
             this.$nextTick(()=>{
                 const mergedGeometry = BufferGeometryUtils.mergeGeometries(this.geos_building) 
                 const mesh = new THREE.Mesh(mergedGeometry, this.MAT_BUILDING)
-                //this.iR.add(mesh) TODO uncomment, just seeing performance gains
+                this.iR.add(mesh) 
             })
 
             this.$emit("sendHighwayData", highwayData)
