@@ -1,21 +1,27 @@
 <template>
     <div id="full">
         <div id="gui">
-            <div>
-            <app-button button-text="Road" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClicked"
+            <div id="road">
+                <app-button :icon="roadButtonIcon" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClicked"
             @walking="handleWalkingClick" @driving="handleDrivingClick" />
             </div>
-            <div>
-            <app-button button-text="Algo" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClicked"
+
+            <div id="building">
+                <app-button :icon="buildingButtonIcon"></app-button>
+            </div>
+
+            <div id="algo">
+                <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClicked"
             @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
             </div>
-            <div>
-                <app-button :button-text="goButtonText" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick"/>
+
+            <div id="go">
+                <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
             </div>
         </div>
         <space :isPedestrian="isWalkingSelected" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
         :centerCoords="centerCoords" :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes"
-        :toggleResetScene="toggleResetScene"/>
+        :toggleResetScene="toggleResetScene"/> 
     </div>
 </template>
 
@@ -36,8 +42,8 @@ export default {
     },
     data(){
         let roadButtons = []
-        roadButtons.push({id:'walking', text: "Walking"})
-        roadButtons.push({id:'driving', text: "Driving"})
+        roadButtons.push({id:'walking', text: "Walking", icon: "mdi-walk"})
+        roadButtons.push({id:'driving', text: "Driving", icon: "mdi-car"})
 
         let algoButtons = []
         algoButtons.push({id:'a-star', text: "A*"})
@@ -65,6 +71,7 @@ export default {
             selectedGoal: null,
             isRunning: false,
             toggleResetScene: false,
+            isBuildingsVisible: true,
         }
     },
     computed: {
@@ -92,8 +99,14 @@ export default {
         isWeightedAlgo(){
             return this.algorithm === 0 || this.algorithm === 1
         },
-        goButtonText(){
-            return this.isRunning? "Stop" : "Go"
+        goButtonIcon(){
+            return this.isRunning? "mdi-stop" : "mdi-play"
+        },
+        roadButtonIcon(){
+            return this.isWalkingSelected? "mdi-walk" : "mdi-car"
+        },
+        buildingButtonIcon(){
+            return this.isBuildingsVisible? "mdi-office-building-remove" : "mdi-office-building-plus"
         },
     },
     methods: {
@@ -106,39 +119,31 @@ export default {
         handleWalkingClick(){
             this.isWalkingSelected = true
             this.isRunning = false
-            console.log("Walking selected")
         },
         handleDrivingClick(){
             this.isWalkingSelected = false
             this.isRunning = false
-            console.log("Driving selected")
         },
         handleAStarClick(){
             this.algorithm = 0
-            console.log("A* selected")
         },
         handleDijkstraClick(){
             this.algorithm = 1
-            console.log("Dijkstra selected")
-            console.log(this.algorithm)
         },
         handleBFSClick(){
             this.algorithm = 2
-            console.log("BFS selected")
         },
         handleDFSClick(){
             this.algorithm = 3
-            console.log("DFS selected")
         },
         async handleComputeClick(){
+            if(this.isRunDisabled) return
         
-            this.isRunning = !this.isRunning 
+            this.isRunning = !this.isRunning
+            if(!this.isRunning){
+                return
+            }
 
-            console.log("GO has been clicked")
-
-            if(this.isRunDisabled || !this.isRunning) return
-
-            //Reset edges
             this.resetEdges()
 
             let gen
@@ -218,7 +223,28 @@ export default {
 
 #gui {
     position: absolute;
-    z-index: 999;
+    z-index: 1;
     margin-left: 50px;
 }
+
+#road {
+    position: absolute;
+    margin-top: 4rem;
+}
+
+#building {
+    position: absolute;
+    margin-top: 14rem;
+}
+
+#algo {
+    position: absolute;
+    margin-top: 24rem;
+}
+
+#go {
+    position: absolute;
+    margin-top: 34rem;
+} 
+
 </style>

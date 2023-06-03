@@ -9,10 +9,12 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@mdi/font": "^7.2.96",
     "geolib": "^3.3.3",
     "pinia": "^2.0.36",
     "three": "^0.152.2",
-    "vue": "^3.3.2"
+    "vue": "^3.3.2",
+    "vuetify": "^3.3.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.2.3",

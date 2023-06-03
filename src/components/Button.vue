@@ -1,9 +1,13 @@
 <template>
-    <div>
-        <button id="main" v-on="$listeners" :disabled="isDisabled"> {{ buttonText }}</button>
+    <div id="wrapper">
+        <v-btn id="main" :class="disabledClass" v-on="$listeners" :disabled="isDisabled" :icon="icon" rounded="lg" :variant="buttonVariant" color="primary"></v-btn>
+        <div class="float">
         <component v-if="isOpen" v-for="buttonItem in secondaryButtonList" v-bind:keys="buttonItem.id">
-            <button @click="handleButton(buttonItem.id)">{{buttonItem.text}}</button>
+            <div>
+            <v-btn id="sub" @click="handleButton(buttonItem.id)" color="secondary" variant="tonal">{{buttonItem.text}}</v-btn>
+            </div>
         </component>
+        </div>
     </div>
 </template>
 
@@ -12,12 +16,26 @@
 export default {
     props: {
         isDisabled: Boolean,
-        buttonText: {
+        buttonText: String,
+        icon: {
             type: String,
-            default: () => "Click me"
+            default: () => "mdi-google-downasaur"
         },
         isOpen: Boolean,
         secondaryButtonList: Array,
+        isPrimary: {
+            type: Boolean,
+            default: () => false
+        }
+    },
+    computed: {
+        buttonVariant(){
+            return this.isPrimary? "elevated" : "outlined"
+        },
+        disabledClass(){
+            //v-btn can still fire when disabled (prop is purely visual) -> explicitly disallow pointer events
+            return this.isDisabled? "cancer" :""
+        }
     },
     methods: {
         handleButton(text) {
@@ -26,19 +44,28 @@ export default {
         }
     }
 }
+
 </script>
 
 <style scoped>
-#main {
-    margin-top: 4rem;
-    width: 4rem;
-    height: 4rem;
-    font-size: 0.5rem;
+#wrapper {
+    display: flex;
 }
 
-li button {
-    width: 2rem;
-    height: 2rem;
-    font-size: 0.25rem;
+#main {
+    width: 4rem;
+    height: 4rem;
+    font-size: 1.0rem;
 }
+
+#sub {
+    margin-left: 40px;
+    min-width: 6rem;
+    margin-bottom: 1rem;
+    font-size: 0.7rem;
+}
+.float {
+    flex:1;
+}
+
 </style>
