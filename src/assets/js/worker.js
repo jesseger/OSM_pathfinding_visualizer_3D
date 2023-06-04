@@ -63,8 +63,6 @@ function computeEdges(data, isRoad){
         for(let [iKey, obj] of intersections.entries()){
             const waysSet = obj.ways
             if(waysSet.has(way)){
-                console.log(way)
-                console.log(waysSet)
                 //Add intersection to nodeList of way (if not in there yet)
 
                 let includes = false //TODO kind of a bad pattern, maybe improve
@@ -105,14 +103,6 @@ function computeEdges(data, isRoad){
                     const coords1 = nodeList[i] 
                     const coords2 = nodeList[j]
 
-                    
-                    // const longLatCoords1 = coordStringToArray(node1)
-                    // const longLatCoords2 = coordStringToArray(node2)
-                    // const coords1 = GPSRelativePosition(longLatCoords1, centerCoords)
-                    // const coords2 = GPSRelativePosition(longLatCoords2, centerCoords)
-                    // const coords1 = GPSRelativePosition(node1, centerCoords)
-                    // const coords2 = GPSRelativePosition(node2, centerCoords)
-
                     const squaredDist =  (coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2
 
                     distances.push({
@@ -141,8 +131,6 @@ function computeEdges(data, isRoad){
             distances.sort((a,b) => {
                 return a.dist > b.dist ? 1 : -1
             })
-
-            //const node_0 = equal2D(distances[0].coords1, start.coords1)? distances[0].coords2 : distances[0].coords1
 
             let node_0_coords, node_0_key
             if(equal2D(distances[0].coords1, start.coords1)){
@@ -194,11 +182,6 @@ function computeEdges(data, isRoad){
  */
 function addEdge([coords1,coords2], [key1,key2], isRoad){
     const edgesMap = isRoad ? roadEdges : footpathEdges
-
-    // const longLatCoords1 = coordStringToArray(node1)
-    // const longLatCoords2 = coordStringToArray(node2)
-    // const coords1 = GPSRelativePosition(longLatCoords1, centerCoords)
-    // const coords2 = GPSRelativePosition(longLatCoords2, centerCoords)
 
     //sqrt is relevant for pathfinding
     const dist = Math.sqrt((coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2)
@@ -279,39 +262,41 @@ function getLineIntersection(linePoints1, linePoints2, key1, key2, isRoad, isFoo
             const intersection = getLineSegmentIntersection(A_x,A_z,B_x,B_z,C_x,C_z,D_x,D_z)
             
             if(intersection){
-                const key = numIntersections//intersection.toString()
+                const iCoords = GPSRelativePosition(intersection, centerCoords)
                 if(isRoad){
-                    const roadIntersectionObject = roadIntersections.get(key)
-                    if(!roadIntersectionObject){
-                        //If this point is new, make a new Set of ways for it
+                    let didExist = false
+                    for(let [key, existingIntersection] of roadIntersections.entries()){
+                        if(iCoords[0] === existingIntersection.coords[0] && iCoords[1] === existingIntersection.coords[1]){
+                            existingIntersection.ways.add(key1) 
+                            existingIntersection.ways.add(key2)
+                            didExist = true
+                            break
+                        }
+                    }
+                    if(!didExist){
                         const s = new Set([key1,key2])
-                        roadIntersections.set(key, {
-                            coords: GPSRelativePosition(intersection, centerCoords),//intersection, //TODO GPSRel
+                        roadIntersections.set(numIntersections, {
+                            coords: iCoords,
                             ways: s,
                         })
-                        
-                    }
-                    else{
-                        //Add both IDs to this point's Set of ways
-                        roadIntersectionObject.ways.add(key1)
-                        roadIntersectionObject.ways.add(key2)
                     }
                 }
                 if(isFootpath){
-                    const footpathIntersectionObject = footpathIntersections.get(key)
-                    if(!footpathIntersectionObject){
-                        //If this point is new, make a new Set of ways for it
+                    let didExist = false
+                    for(let [key, existingIntersection] of footpathIntersections.entries()){
+                        if(iCoords[0] === existingIntersection.coords[0] && iCoords[1] === existingIntersection.coords[1]){
+                            existingIntersection.ways.add(key1)
+                            existingIntersection.ways.add(key2)
+                            didExist = true
+                            break
+                        }
+                    }
+                    if(!didExist){
                         const s = new Set([key1,key2])
-                        footpathIntersections.set(key, {
-                            coords: GPSRelativePosition(intersection, centerCoords),//intersection, //TODO GPSRel 
+                        footpathIntersections.set(numIntersections, {
+                            coords: GPSRelativePosition(intersection, centerCoords),
                             ways: s,
                         })
-                        
-                    }
-                    else{
-                        //Add both IDs to this point's Set of ways
-                        footpathIntersectionObject.ways.add(key1)
-                        footpathIntersectionObject.ways.add(key2)
                     }
                 }
                 numIntersections++ 
