@@ -99,12 +99,12 @@ export default {
             handler(val, oldVal){
                 if(val && this.footpathIntersections){
                     this.handleIntersectionsChange(this.footpathIntersections)
-                    this.handleEdgesChange(this.footpathEdges, this.footpathEdgesMap)
+                    this.handleEdgesChange(this.footpathEdges, this.footpathEdgesMap, false)
                     this.resetSelection()
                 }
                 else if(!val && this.roadIntersections){
                     this.handleIntersectionsChange(this.roadIntersections)
-                    this.handleEdgesChange(this.roadEdges, this.roadEdgesMap)
+                    this.handleEdgesChange(this.roadEdges, this.roadEdgesMap, true)
                     this.resetSelection()
                 }
             }
@@ -172,8 +172,10 @@ export default {
             this.intersection_colliders = []
             const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
             
-            for(let stringCoords of intersections.keys()){
-                const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
+            // for(let stringCoords of intersections.keys()){
+            //     const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
+            for(let intersection of intersections.values()){
+                const coords = intersection.coords
                 const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
                 geometry.translate(coords[0],0,coords[1])
                 geometry.rotateZ(Math.PI)
@@ -184,16 +186,19 @@ export default {
                 this.intersection_colliders.push(sphere)
             }
         },
-        handleEdgesChange(edges, edgesMap){
+        handleEdgesChange(edges, edgesMap, isRoad){
             const iR_edges = new THREE.Group()
             iR_edges.name = "edges"
 
+            const intersections = isRoad? this.roadIntersections : this.footpathIntersections
+
             for(let node1 of edges.keys()){
-                const coords1 = coordStringToArray(node1)
+                const coords1 = intersections.get(node1).coords //coordStringToArray(node1)
                 for(let edge of edges.get(node1)){
 
                     const node2 = edge.neighbor 
-                    const coords2 = coordStringToArray(node2)
+                    //const coords2 = coordStringToArray(node2)
+                    const coords2 = intersections.get(node2).coords
 
                     const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
                     const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
