@@ -14,6 +14,8 @@ import Stats from 'three/addons/libs/stats.module.js';
 
 import { GPSRelativePosition, coordStringToArray } from '../assets/js/utils';
 
+import { useTheme } from 'vuetify'
+
 export default {
     name: 'space',
     props:{
@@ -38,6 +40,7 @@ export default {
             stats: null,
             geos_building: [],
             edgesMap: new Map(),
+            theme: useTheme(),
         }
     },
     mounted(){
@@ -91,7 +94,7 @@ export default {
         intersections: {
             handler(val, oldVal){
                 this.intersection_colliders = []
-                const MAT_NODE = new THREE.MeshBasicMaterial( { color: 0x68C0FC } )    
+                const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
                 
                 for(let stringCoords of this.intersections.keys()){
                     const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
@@ -117,7 +120,7 @@ export default {
                     const coords1 = coordStringToArray(node1)
                     for(let edge of this.edges.get(node1)){
 
-                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: 0x204A44}) // teal: 0x0B9E8A, dark green: 0x1c4f46, #258578 #204A44
+                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) // current: #204A44
                         const node2 = edge.neighbor 
                         const coords2 = coordStringToArray(node2)
 
@@ -152,7 +155,7 @@ export default {
         animationData: {
             handler(val, oldVal){
                 //Add new edge to frontierEdge
-                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: 0xFFE921, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
+                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
 
                 if(val[1]){
                     const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
@@ -186,7 +189,7 @@ export default {
             handler(val, oldVal){
                 for(let edge of this.shortestPath){
                     const selectedEdge = this.scene.getObjectByName(edge.toString());
-                    const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: 0x12B323 } ) // 0x47ff4a
+                    const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: this.theme.global.current.colors.secondary} )
                     selectedEdge.material = MAT_SHORTEST
                 }
             },
@@ -217,7 +220,7 @@ export default {
             this.scene.background = new THREE.Color(0x222222)
 
             //init camera
-            this.camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.1, 100)
+            this.camera = new THREE.PerspectiveCamera(25, window.innerWidth / window.innerHeight, 0.1, 50)
             this.camera.position.set(5,5,-5)
             this.camera.updateProjectionMatrix()
 
@@ -466,7 +469,7 @@ export default {
         resetAnimation(){
             console.log("Reset animation called")
             for(let [key, line] of this.edgesMap.entries()){
-                line.material = new THREE.LineBasicMaterial({ color: 0x204A44})
+                line.material = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']})
             }
         },
         resetSelection(){

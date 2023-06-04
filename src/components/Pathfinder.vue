@@ -15,9 +15,16 @@
             @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
             </div>
 
-            <div id="go">
-                <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
-            </div>
+            <v-tooltip :disabled="!isRunDisabled">
+                <template v-slot:activator="{ props }">
+                    <div id="go" v-bind="props">
+                        <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
+                    </div>
+                </template>
+                <span v-if="!selectedStart"> Select a start node with ALT + click <br/></span>
+                <span v-if="!selectedGoal"> Select an end node with ALT + click <br/></span>
+                <span v-if="!roadEdges"> Edges are still loading</span>
+            </v-tooltip>
         </div>
         <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
         :centerCoords="centerCoords" :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes"

@@ -1,10 +1,10 @@
 <template>
     <div id="wrapper">
-        <v-btn id="main" :class="disabledClass" v-on="$listeners" :disabled="isDisabled" :icon="icon" rounded="lg" :variant="buttonVariant" color="primary"></v-btn>
+            <v-btn outlined id="main" v-on="$listeners" :disabled="isDisabled" :icon="icon" rounded="lg"  color="primary" :variant="buttonVariant"></v-btn>
         <div class="float">
         <component v-if="isOpen" v-for="buttonItem in secondaryButtonList" v-bind:keys="buttonItem.id">
             <div>
-            <v-btn id="sub" @click="handleButton(buttonItem.id)" color="secondary" variant="tonal">{{buttonItem.text}}</v-btn>
+            <v-btn id="sub" @click="handleButton(buttonItem.id)" color="secondary" >{{buttonItem.text}}</v-btn>
             </div>
         </component>
         </div>
@@ -30,12 +30,8 @@ export default {
     },
     computed: {
         buttonVariant(){
-            return this.isPrimary? "elevated" : "outlined"
+            return this.isPrimary? "elevated" : "outlined" 
         },
-        disabledClass(){
-            //v-btn can still fire when disabled (prop is purely visual) -> explicitly disallow pointer events
-            return this.isDisabled? "cancer" :""
-        }
     },
     methods: {
         handleButton(text) {
@@ -63,9 +59,16 @@ export default {
     min-width: 6rem;
     margin-bottom: 1rem;
     font-size: 0.7rem;
+    background: #00b3ffbb !important;
 }
+
 .float {
     flex:1;
+}
+
+.v-btn--variant-outlined {
+    background: rgba(255, 255, 255, 0.521);
+    color: #ff4d00;
 }
 
 </style>
