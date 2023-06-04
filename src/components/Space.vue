@@ -120,7 +120,6 @@ export default {
                     const coords1 = coordStringToArray(node1)
                     for(let edge of this.edges.get(node1)){
 
-                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) // current: #204A44
                         const node2 = edge.neighbor 
                         const coords2 = coordStringToArray(node2)
 
@@ -129,7 +128,7 @@ export default {
                         const geometry = new THREE.BufferGeometry().setFromPoints([point1, point2])
                         geometry.rotateZ(Math.PI)
 
-                        const line = new THREE.Line(geometry, MAT_EDGE)
+                        const line = new THREE.Line(geometry, this.MAT_EDGE)
                         line.name = [node1,node2].toString()
                         this.edgesMap.set([node1,node2].toString(), line)
                         iR_edges.add(line)
@@ -155,12 +154,12 @@ export default {
         animationData: {
             handler(val, oldVal){
                 //Add new edge to frontierEdge
-                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
+                //const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
 
                 if(val[1]){
                     const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
                     unvisitedEdge.computeLineDistances() 
-                    unvisitedEdge.material = MAT_FRONTIER
+                    unvisitedEdge.material = this.MAT_FRONTIER
                 }                
 
                 //Edge that we took to currentNode is now visited
@@ -286,6 +285,10 @@ export default {
 
             this.selectedStart = null
             this.selectedGoal = null
+
+            //Animation
+            this.MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02})
+            this.MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) 
 
             this.Update()
 
@@ -469,7 +472,7 @@ export default {
         resetAnimation(){
             console.log("Reset animation called")
             for(let [key, line] of this.edgesMap.entries()){
-                line.material = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']})
+                line.material = this.MAT_EDGE
             }
         },
         resetSelection(){

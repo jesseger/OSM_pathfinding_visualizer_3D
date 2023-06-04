@@ -72,7 +72,7 @@ export default {
             roadEdges: null,
             footpathEdges: null,
             animationData: null,
-            animationSpeed: 10,
+            animationSpeed: 0,
             shortestPath: null,
             selectedStart: null,
             selectedGoal: null,
