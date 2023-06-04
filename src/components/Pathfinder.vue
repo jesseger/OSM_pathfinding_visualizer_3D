@@ -26,9 +26,9 @@
                 <span v-if="!roadEdges"> Edges are still loading</span>
             </v-tooltip>
         </div>
-        <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
-        :centerCoords="centerCoords" :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes"
-        :toggleResetScene="toggleResetScene"/> 
+        <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :footpathIntersections="footpathIntersections" :roadIntersections="roadIntersections" 
+        :footpathEdges="footpathEdges" :roadEdges="roadEdges" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords" 
+        :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" /> 
     </div>
 </template>
 
@@ -64,7 +64,7 @@ export default {
             isAlgoButtonOpen: false,
             roadButtons: roadButtons,
             algoButtons: algoButtons,
-            isWalkingSelected: false,
+            isWalkingSelected: null,
             algorithm: null,
             highwayData: null,
             roadIntersections: null,
@@ -124,11 +124,11 @@ export default {
             this.isAlgoButtonOpen = !this.isAlgoButtonOpen
         },
         handleWalkingClick(){
-            this.isWalkingSelected = true
+            if(this.isWalkingSelected !== null) this.isWalkingSelected = true
             this.isRunning = false
         },
         handleDrivingClick(){
-            this.isWalkingSelected = false
+            if(this.isWalkingSelected !== null) this.isWalkingSelected = false
             this.isRunning = false
         },
         handleBuildingButtonClicked(){
@@ -207,6 +207,8 @@ export default {
                     this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : null
                     this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
                     this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
+
+                    if(this.roadIntersections && this.roadEdges) this.isWalkingSelected = false
                 }
             }
             else{

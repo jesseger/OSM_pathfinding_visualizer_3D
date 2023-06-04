@@ -24,8 +24,10 @@ export default {
             default: () => false
         },
         isBuildingsVisible: Boolean,
-        intersections: Object,
-        edges: Object,
+        roadIntersections: Object,
+        footpathIntersections: Object,
+        roadEdges: Object,
+        footpathEdges: Object,
         centerCoords: Array,
         animationData: Array,
         shortestPath: Array,
@@ -40,6 +42,8 @@ export default {
             stats: null,
             geos_building: [],
             edgesMap: new Map(),
+            roadEdgesMap: new Map(),
+            footpathEdgesMap: new Map(),
             theme: useTheme(),
         }
     },
@@ -91,94 +95,47 @@ export default {
         })
     },
     watch : {
-        intersections: {
-            handler(val, oldVal){
-                this.intersection_colliders = []
-                const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
-                
-                for(let stringCoords of this.intersections.keys()){
-                    const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
-                    const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
-                    geometry.translate(coords[0],0,coords[1])
-                    geometry.rotateZ(Math.PI)
-
-                    const sphere = new THREE.Mesh(geometry, MAT_NODE)
-                    sphere.name = coords.toString()
-
-                    this.intersection_colliders.push(sphere)
-                }
-            },
-            deep: true,
-        },
-        edges: {
-            handler(val, oldVal){
-                
-                const iR_edges = new THREE.Group()
-                iR_edges.name = "edges"
-
-                for(let node1 of this.edges.keys()){
-                    const coords1 = coordStringToArray(node1)
-                    for(let edge of this.edges.get(node1)){
-
-                        const node2 = edge.neighbor 
-                        const coords2 = coordStringToArray(node2)
-
-                        const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
-                        const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
-                        const geometry = new THREE.BufferGeometry().setFromPoints([point1, point2])
-                        geometry.rotateZ(Math.PI)
-
-                        const line = new THREE.Line(geometry, this.MAT_EDGE)
-                        line.name = [node1,node2].toString()
-                        this.edgesMap.set([node1,node2].toString(), line)
-                        iR_edges.add(line)
-                   	}
-                }       
-                
-                //Remove old edges if they exist
-                const selectedObject = this.scene.getObjectByName("edges");
-                if(selectedObject){
-                    this.scene.remove( selectedObject );
-                }
-                //Add new edges
-                this.scene.add(iR_edges) 
-            
-            },
-            deep: true,
-        },
         isPedestrian: {
             handler(val, oldVal){
-                this.resetSelection()
+                if(val && this.footpathIntersections){
+                    this.handleIntersectionsChange(this.footpathIntersections)
+                    this.handleEdgesChange(this.footpathEdges, this.footpathEdgesMap)
+                    this.resetSelection()
+                }
+                else if(!val && this.roadIntersections){
+                    this.handleIntersectionsChange(this.roadIntersections)
+                    this.handleEdgesChange(this.roadEdges, this.roadEdgesMap)
+                    this.resetSelection()
+                }
             }
         },
         animationData: {
             handler(val, oldVal){
                 //Add new edge to frontierEdge
-                //const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
+                const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap 
 
                 if(val[1]){
-                    const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
-                    unvisitedEdge.computeLineDistances() 
+                    const unvisitedEdge = edgesMap.get([val[0],val[1]].toString())
                     unvisitedEdge.material = this.MAT_FRONTIER
                 }                
 
                 //Edge that we took to currentNode is now visited
                 if(val[2]){
-                    const selectedEdge = this.edgesMap.get([val[2],val[0]].toString())
+                    const selectedEdge = edgesMap.get([val[2],val[0]].toString())
 
-                    let lightness
-                    if(this.isWeightedAlgo){
-                        const factor = 2
-                        lightness = 50 + 50 * Math.min((factor / val[3]), 1) //Color changes based on euclidean dist. to start
-                    }
-                    else {
-                        lightness = Math.max(50, 100 - 2*val[3])
-                    }
+                    // let lightness
+                    // if(this.isWeightedAlgo){
+                    //     const factor = 2
+                    //     lightness = 50 + 50 * Math.min((factor / val[3]), 1) //Color changes based on euclidean dist. to start
+                    // }
+                    // else {
+                    //     lightness = Math.max(50, 100 - 2*val[3])
+                    // }
 
-                    const COLOR_VISITED = new THREE.Color(`hsl(18, 100%, ${lightness}%)`)
-                    const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } )
+                    // const COLOR_VISITED = new THREE.Color(`hsl(18, 100%, ${lightness}%)`)
+                    // const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } )
 
-                    selectedEdge.material = MAT_VISITED
+                    selectedEdge.material = this.MAT_VISITED
                 }
             
             },
@@ -211,6 +168,54 @@ export default {
         },
     },
     methods: {
+        handleIntersectionsChange(intersections){
+            this.intersection_colliders = []
+            const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
+            
+            for(let stringCoords of intersections.keys()){
+                const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
+                const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
+                geometry.translate(coords[0],0,coords[1])
+                geometry.rotateZ(Math.PI)
+
+                const sphere = new THREE.Mesh(geometry, MAT_NODE)
+                sphere.name = coords.toString()
+
+                this.intersection_colliders.push(sphere)
+            }
+        },
+        handleEdgesChange(edges, edgesMap){
+            const iR_edges = new THREE.Group()
+            iR_edges.name = "edges"
+
+            for(let node1 of edges.keys()){
+                const coords1 = coordStringToArray(node1)
+                for(let edge of edges.get(node1)){
+
+                    const node2 = edge.neighbor 
+                    const coords2 = coordStringToArray(node2)
+
+                    const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
+                    const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
+                    const geometry = new THREE.BufferGeometry().setFromPoints([point1, point2])
+                    geometry.rotateZ(Math.PI)
+
+                    const line = new THREE.Line(geometry, this.MAT_EDGE)
+                    line.name = [node1,node2].toString()
+                    line.computeLineDistances()
+                    edgesMap.set([node1,node2].toString(), line)
+                    iR_edges.add(line)
+                }
+            }       
+            
+            //Remove old edges if they exist
+            const selectedObject = this.scene.getObjectByName("edges");
+            if(selectedObject){
+                this.scene.remove( selectedObject );
+            }
+            //Add new edges
+            this.scene.add(iR_edges) 
+        },
         Awake(){
             let cont = document.getElementById("cont")
             
@@ -289,6 +294,7 @@ export default {
             //Animation
             this.MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02})
             this.MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) 
+            this.MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: 'red' } )
 
             this.Update()
 
@@ -471,7 +477,8 @@ export default {
         },
         resetAnimation(){
             console.log("Reset animation called")
-            for(let [key, line] of this.edgesMap.entries()){
+            const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap
+            for(let [key, line] of edgesMap.entries()){
                 line.material = this.MAT_EDGE
             }
         },
