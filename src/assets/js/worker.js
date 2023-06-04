@@ -125,7 +125,7 @@ function computeEdges(data, isRoad){
 
             //Pairs that do not contain endpoint are irrelevant
             distances = distances.map((obj) => {
-                return equal2D(obj.coords1, start.coords1) || equal2D(obj.coords2, start.coords2)? obj : undefined
+                return equal2D(obj.coords1, start.coords1) || equal2D(obj.coords2, start.coords1)? obj : undefined
             })
 
             distances.sort((a,b) => {
@@ -146,7 +146,6 @@ function computeEdges(data, isRoad){
 
             for(let i=0;i<nodeListLength-2;i++){
                 const j = i+1
-                //const coords_i = equal2D(distances[i].coords1, start)? distances[i].coords2 : distances[i].coords1
                 let coords_i,key_i
                 if(equal2D(distances[i].coords1, start.coords1)){
                     coords_i = distances[i].coords2
@@ -156,7 +155,6 @@ function computeEdges(data, isRoad){
                     coords_i = distances[i].coords1
                     key_i = distances[i].key1
                 }
-                //const coords_j = equal2D(distances[j].coords1, start)? distances[j].coords2 : distances[j].coords1
                 let coords_j,key_j
                 if(equal2D(distances[j].coords1, start.coords1)){
                     coords_j = distances[j].coords2
