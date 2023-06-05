@@ -39,6 +39,8 @@ import AppButton from './Button.vue'
 import { astar } from '../assets/js/astar.js'
 import { bfs } from '../assets/js/bfs'
 
+import { coordStringToArray } from '../assets/js/utils'
+
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
 export default {
@@ -159,10 +161,10 @@ export default {
             let gen
             switch (this.algorithm) {
                 case 0:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal)
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
                     break
                 case 1:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal, function(x,y){
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal, function(x,y,V){
                         return 0
                     })
                     break
@@ -173,12 +175,14 @@ export default {
                     gen = astar(this.edges, this.selectedStart, this.selectedGoal)
                     break
                 default:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal)
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
             }
 
             const start = Date.now()
 
+            let i = 0
             for (let data of gen){
+                i++
                 if(!this.isRunning) break
 
                 if(Array.isArray(data)){
@@ -190,6 +194,7 @@ export default {
             }
 
             console.log(`Compute took ${Date.now() - start} ms`)
+            console.log(`and ${i} rendering passes`)
             this.isRunning = false
         },
         handleHighwayData(highwayData){
@@ -217,8 +222,20 @@ export default {
             }
         },  
         handleSelectedNodes(data){
-            this.selectedStart = data.start
-            this.selectedGoal = data.goal
+            const start = data.start? coordStringToArray(data.start) : null
+            const goal = data.goal? coordStringToArray(data.goal) : null
+
+            let keyStart, keyGoal
+            for(let [key, node] of this.intersections.entries()){
+                if(start && start[0] === node.coords[0] && start[1] === node.coords[1]){
+                    keyStart = key
+                }
+                if(goal && goal[0] === node.coords[0] && goal[1] === node.coords[1]){
+                    keyGoal = key
+                }
+            }
+            this.selectedStart = keyStart
+            this.selectedGoal = keyGoal
         },
         resetEdges(){
             this.toggleResetScene = !this.toggleResetScene
