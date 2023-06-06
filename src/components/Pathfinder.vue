@@ -2,16 +2,16 @@
     <div id="full">
         <div id="gui">
             <div id="road">
-                <app-button :icon="roadButtonIcon" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClicked"
+                <app-button :icon="roadButtonIcon" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClick"
             @walking="handleWalkingClick" @driving="handleDrivingClick" />
             </div>
 
             <div id="building">
-                <app-button :icon="buildingButtonIcon" @click="handleBuildingButtonClicked"></app-button>
+                <app-button :icon="buildingButtonIcon" @click="handleBuildingButtonClick"></app-button>
             </div>
 
             <div id="algo">
-                <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClicked"
+                <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClick"
             @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
             </div>
 
@@ -21,14 +21,33 @@
                         <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
                     </div>
                 </template>
-                <span v-if="!selectedStart"> Select a start node with ALT + click <br/></span>
-                <span v-if="!selectedGoal"> Select an end node with ALT + click <br/></span>
+                <span v-if="!selectedStart"> Select a start node with S <br/></span>
+                <span v-if="!selectedGoal"> Select a goal node with G <br/></span>
                 <span v-if="!roadEdges"> Edges are still loading</span>
             </v-tooltip>
+
+        <div id="select">
+            <v-select
+            v-model="animationLabel"
+            :items="['None','Normal','Slow']"
+            label="Animation"
+            density="compact"
+            ></v-select>
         </div>
+
+        <div id="help">
+            <app-button icon="mdi-help" @click="handleHelpButtonClick"></app-button>
+        </div>
+        </div>
+
+        <div id="helpWindow" v-if="isHelpButtonOpen">
+            <help-page />
+        </div>
+
         <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :footpathIntersections="footpathIntersections" :roadIntersections="roadIntersections" 
         :footpathEdges="footpathEdges" :roadEdges="roadEdges" :isDataReady="isDataReady" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords" 
-        :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" /> 
+        :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" 
+        :isRunning="isRunning"/> 
     </div>
 </template>
 
@@ -36,10 +55,9 @@
 
 import Space from './Space.vue'
 import AppButton from './Button.vue'
+import HelpPage from './HelpPage.vue'
 import { astar } from '../assets/js/astar.js'
 import { bfs } from '../assets/js/bfs'
-
-import { coordStringToArray } from '../assets/js/utils'
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
@@ -48,6 +66,7 @@ export default {
     components: {
         Space,
         AppButton,
+        HelpPage
     },
     data(){
         let roadButtons = []
@@ -74,13 +93,14 @@ export default {
             roadEdges: null,
             footpathEdges: null,
             animationData: null,
-            animationSpeed: 0,
+            animationLabel: 'Normal',
             shortestPath: null,
             selectedStart: null,
             selectedGoal: null,
             isRunning: false,
             toggleResetScene: false,
             isBuildingsVisible: true,
+            isHelpButtonOpen: false,
         }
     },
     computed: {
@@ -120,12 +140,28 @@ export default {
         buildingButtonIcon(){
             return this.isBuildingsVisible? "mdi-office-building-remove" : "mdi-office-building-plus"
         },
+        helpButtonIcon(){
+            return "mdi-help"
+        },
+        animationSpeed(){
+            console.log("Anilabel now: ", this.animationLabel)
+            switch(this.animationLabel){
+                case 'None':
+                    return null
+                case 'Normal':
+                    return 10
+                case 'Slow': 
+                    return 1000
+                default:
+                    return 10
+            }
+        }
     },
     methods: {
-        handleRoadButtonClicked(){
+        handleRoadButtonClick(){
             this.isRoadButtonOpen = !this.isRoadButtonOpen
         },
-        handleAlgoButtonClicked(){
+        handleAlgoButtonClick(){
             this.isAlgoButtonOpen = !this.isAlgoButtonOpen
         },
         handleWalkingClick(){
@@ -136,7 +172,7 @@ export default {
             this.isWalkingSelected = false
             this.isRunning = false
         },
-        handleBuildingButtonClicked(){
+        handleBuildingButtonClick(){
             this.isBuildingsVisible = !this.isBuildingsVisible
         },
         handleAStarClick(){
@@ -150,6 +186,9 @@ export default {
         },
         handleDFSClick(){
             this.algorithm = 3
+        },
+        handleHelpButtonClick(){
+            this.isHelpButtonOpen = !this.isHelpButtonOpen
         },
         async handleComputeClick(){
             if(this.isRunDisabled) return
@@ -191,7 +230,9 @@ export default {
                 } else{
                     this.shortestPath = data.success? data.path : []
                 }        
-                await timer(this.animationSpeed)
+                if(this.animationSpeed){
+                    await timer(this.animationSpeed)
+                }
             }
 
             console.log(`Compute took ${Date.now() - start} ms`)
@@ -247,22 +288,40 @@ export default {
 
 #road {
     position: absolute;
-    margin-top: 4rem;
+    margin-top: 4vh/*4rem*/;
 }
 
 #building {
     position: absolute;
-    margin-top: 14rem;
+    margin-top: 18vh /*14rem*/;
 }
 
 #algo {
     position: absolute;
-    margin-top: 24rem;
+    margin-top: 32vh/*24rem*/;
 }
 
 #go {
     position: absolute;
-    margin-top: 34rem;
+    margin-top: 46vh;
 } 
+
+#select {
+    position: absolute;
+    margin-top: 54vh;
+    margin-left: -30px;
+    width: 120px;
+    color: #ff4d00;   
+}
+
+#help {
+    position: absolute;
+    margin-top: 90vh;
+}
+#select >>> .v-field__overlay{
+    background-color: white;
+    opacity: 0.5;
+    outline: 2px solid #ff4d00;
+}
 
 </style>

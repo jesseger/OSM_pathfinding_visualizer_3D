@@ -34,6 +34,7 @@ export default {
         shortestPath: Array,
         isWeightedAlgo: Boolean,
         toggleResetScene: Boolean,
+        isRunning: Boolean,
     },
     data(){
         return{ 
@@ -62,38 +63,49 @@ export default {
 
         onWindowResize()
 
-        //when user alt+clicks to select building
-        document.getElementById("cont").addEventListener('click', (e)=>{
-            if(!e.altKey) return
-            const pointer = {
-                x: ( e.clientX / window.innerWidth ) * 2 - 1,
-	            y: - ( e.clientY / window.innerHeight ) * 2 + 1,
-            }
+        var mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', function(e){
+            mouseX = e.pageX
+            mouseY = e.pageY;
+        }, false);
 
+        //Click s for start, g for goal
+        document.addEventListener('keypress', (e)=>{
+            console.log("We in keydown")
+            const pointer = {
+                x: ( mouseX / window.innerWidth ) * 2 - 1,
+	            y: - ( mouseY / window.innerHeight ) * 2 + 1,
+            }
             const hitObject = this.FireRaycaster(pointer)
-            if(hitObject){
-                if(!this.selectedStart){
-                    this.selectedStart = hitObject
-                    this.scene.add(hitObject)
-                }
-                else if(!this.selectedGoal){
-                    if(this.selectedStart == hitObject){
+            if(hitObject && !this.isRunning){
+                if(e.key === 's'){
+                    if(hitObject === this.selectedGoal) return
+                    if(!this.selectedStart || this.selectedStart !== hitObject){
+                        this.scene.remove(this.selectedStart)
+                        this.selectedStart = hitObject
+                        this.scene.add(hitObject)
+                    }
+                    else {
                         this.selectedStart = null
                         this.scene.remove(hitObject)
-                    } else{
+                    }
+                }
+                if(e.key === 'g'){
+                    if(hitObject === this.selectedStart) return
+                    if(!this.selectedGoal || this.selectedGoal !== hitObject){
+                        this.scene.remove(this.selectedGoal)
                         this.selectedGoal = hitObject
                         this.scene.add(hitObject)
                     }
-                }
-                else{
-                    if(this.selectedGoal == hitObject){
+                    else {
                         this.selectedGoal = null
                         this.scene.remove(hitObject)
                     }
                 }
+
                 this.updateSelection()
             }
-        })
+            })
     },
     watch : {
         isDataReady: {
