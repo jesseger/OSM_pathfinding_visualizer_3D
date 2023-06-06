@@ -28,6 +28,7 @@ export default {
         footpathIntersections: Object,
         roadEdges: Object,
         footpathEdges: Object,
+        isDataReady: Boolean,
         centerCoords: Array,
         animationData: Array,
         shortestPath: Array,
@@ -95,14 +96,25 @@ export default {
         })
     },
     watch : {
+        isDataReady: {
+            handler(val, oldVal){
+                if(val){
+                    const intersections = this.isPedestrian? this.footpathIntersections : this.roadIntersections
+                    const edges = this.isPedestrian? this.footpathEdges : this.roadEdges
+                    const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap
+                    this.handleIntersectionsChange(intersections)
+                    this.handleEdgesChange(edges, edgesMap, !this.isPedestrian)
+                }
+            }
+        },
         isPedestrian: {
             handler(val, oldVal){
-                if(val && this.footpathIntersections){
+                if(val && this.isDataReady){
                     this.handleIntersectionsChange(this.footpathIntersections)
                     this.handleEdgesChange(this.footpathEdges, this.footpathEdgesMap, false)
                     this.resetSelection()
                 }
-                else if(!val && this.roadIntersections){
+                else if(!val && this.isDataReady){
                     this.handleIntersectionsChange(this.roadIntersections)
                     this.handleEdgesChange(this.roadEdges, this.roadEdgesMap, true)
                     this.resetSelection()
@@ -116,26 +128,27 @@ export default {
 
                 if(val[1]){
                     const unvisitedEdge = edgesMap.get([val[0],val[1]].toString())
-                    unvisitedEdge.material = this.MAT_FRONTIER
+                    const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02})
+                    unvisitedEdge.material = MAT_FRONTIER
                 }                
 
                 //Edge that we took to currentNode is now visited
                 if(val[2]){
                     const selectedEdge = edgesMap.get([val[2],val[0]].toString())
 
-                    // let lightness
-                    // if(this.isWeightedAlgo){
-                    //     const factor = 2
-                    //     lightness = 50 + 50 * Math.min((factor / val[3]), 1) //Color changes based on euclidean dist. to start
-                    // }
-                    // else {
-                    //     lightness = Math.max(50, 100 - 2*val[3])
-                    // }
+                    let lightness
+                    if(this.isWeightedAlgo){
+                        const factor = 2
+                        lightness = 50 + 50 * Math.min((factor / val[3]), 1) //Color changes based on euclidean dist. to start
+                    }
+                    else {
+                        lightness = Math.max(50, 100 - 2*val[3])
+                    }
 
-                    // const COLOR_VISITED = new THREE.Color(`hsl(18, 100%, ${lightness}%)`)
-                    // const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } )
+                    const COLOR_VISITED = new THREE.Color(`hsl(18, 100%, ${lightness}%)`)
+                    const MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: COLOR_VISITED } )
 
-                    selectedEdge.material = this.MAT_VISITED
+                    selectedEdge.material = MAT_VISITED
                 }
             
             },
@@ -172,8 +185,6 @@ export default {
             this.intersection_colliders = []
             const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
             
-            // for(let stringCoords of intersections.keys()){
-            //     const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
             for(let intersection of intersections.values()){
                 const coords = intersection.coords
                 const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
@@ -193,11 +204,10 @@ export default {
             const intersections = isRoad? this.roadIntersections : this.footpathIntersections
 
             for(let node1 of edges.keys()){
-                const coords1 = intersections.get(node1).coords //coordStringToArray(node1)
+                const coords1 = intersections.get(node1).coords 
                 for(let edge of edges.get(node1)){
 
                     const node2 = edge.neighbor 
-                    //const coords2 = coordStringToArray(node2)
                     const coords2 = intersections.get(node2).coords
 
                     const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
@@ -206,9 +216,10 @@ export default {
                     geometry.rotateZ(Math.PI)
 
                     const line = new THREE.Line(geometry, this.MAT_EDGE)
-                    line.name = [node1,node2].toString()
+                    const lineName = [node1,node2].toString()
+                    line.name = lineName
                     line.computeLineDistances()
-                    edgesMap.set([node1,node2].toString(), line)
+                    edgesMap.set(lineName, line) 
                     iR_edges.add(line)
                 }
             }       
@@ -260,9 +271,6 @@ export default {
             this.scene.add(light1)
             this.scene.add(light2)
 
-            //const gridHelper = new THREE.GridHelper(60, 150, new THREE.Color(0x555555), new THREE.Color(0x333333))
-            //this.scene.add(gridHelper)
-
             //init renderer
             this.renderer = new THREE.WebGLRenderer({antialias: true})
             this.renderer.setPixelRatio(window.devicePixelRatio)
@@ -297,9 +305,7 @@ export default {
             this.selectedGoal = null
 
             //Animation
-            this.MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02})
             this.MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) 
-            this.MAT_VISITED = new THREE.LineBasicMaterial( {linewidth: 2, color: 'red' } )
 
             this.Update()
 

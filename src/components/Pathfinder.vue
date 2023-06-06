@@ -27,7 +27,7 @@
             </v-tooltip>
         </div>
         <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :footpathIntersections="footpathIntersections" :roadIntersections="roadIntersections" 
-        :footpathEdges="footpathEdges" :roadEdges="roadEdges" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords" 
+        :footpathEdges="footpathEdges" :roadEdges="roadEdges" :isDataReady="isDataReady" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords" 
         :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" /> 
     </div>
 </template>
@@ -66,7 +66,7 @@ export default {
             isAlgoButtonOpen: false,
             roadButtons: roadButtons,
             algoButtons: algoButtons,
-            isWalkingSelected: null,
+            isWalkingSelected: false,
             algorithm: null,
             highwayData: null,
             roadIntersections: null,
@@ -105,6 +105,9 @@ export default {
             }
             return null
         },
+        isDataReady(){
+            return this.footpathEdges !== null && this.footpathIntersections !== null
+        },
         isWeightedAlgo(){
             return this.algorithm === 0 || this.algorithm === 1
         },
@@ -126,11 +129,11 @@ export default {
             this.isAlgoButtonOpen = !this.isAlgoButtonOpen
         },
         handleWalkingClick(){
-            if(this.isWalkingSelected !== null) this.isWalkingSelected = true
+            this.isWalkingSelected = true
             this.isRunning = false
         },
         handleDrivingClick(){
-            if(this.isWalkingSelected !== null) this.isWalkingSelected = false
+            this.isWalkingSelected = false
             this.isRunning = false
         },
         handleBuildingButtonClicked(){
@@ -164,9 +167,7 @@ export default {
                     gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
                     break
                 case 1:
-                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal, function(x,y,V){
-                        return 0
-                    })
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal, (x,y,V) => 0)
                     break
                 case 2:
                     gen = bfs(this.edges, this.selectedStart, this.selectedGoal)
@@ -213,7 +214,7 @@ export default {
                     this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
                     this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
 
-                    if(this.roadIntersections && this.roadEdges) this.isWalkingSelected = false
+                    //if(this.roadIntersections && this.roadEdges) this.isHighwayReady = true //this.isWalkingSelected = false
                 }
             }
             else{
@@ -222,20 +223,8 @@ export default {
             }
         },  
         handleSelectedNodes(data){
-            const start = data.start? coordStringToArray(data.start) : null
-            const goal = data.goal? coordStringToArray(data.goal) : null
-
-            let keyStart, keyGoal
-            for(let [key, node] of this.intersections.entries()){
-                if(start && start[0] === node.coords[0] && start[1] === node.coords[1]){
-                    keyStart = key
-                }
-                if(goal && goal[0] === node.coords[0] && goal[1] === node.coords[1]){
-                    keyGoal = key
-                }
-            }
-            this.selectedStart = keyStart
-            this.selectedGoal = keyGoal
+            this.selectedStart = data.start
+            this.selectedGoal = data.goal
         },
         resetEdges(){
             this.toggleResetScene = !this.toggleResetScene

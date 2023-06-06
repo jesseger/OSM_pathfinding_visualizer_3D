@@ -21,9 +21,6 @@ onmessage = (e) => {
 
     computeLineIntersections(e.data.highwayData)
 
-    console.log(roadIntersections)
-    console.log(footpathIntersections)
-
     postMessage({
         roadIntersections: roadIntersections,
         footpathIntersections: footpathIntersections,
@@ -33,8 +30,6 @@ onmessage = (e) => {
 
     computeEdges(e.data.highwayData, true)
     computeEdges(e.data.highwayData, false)
-    console.log(roadEdges)
-    console.log(footpathEdges)
 
     postMessage({
         roadIntersections: roadIntersections,
@@ -42,6 +37,7 @@ onmessage = (e) => {
         roadEdges: roadEdges,
         footpathEdges: footpathEdges,
     })
+
 }
 /**
  * Computes edges of graph, given highway data 
@@ -56,28 +52,14 @@ function computeEdges(data, isRoad){
     for(let i=0; i<wayList.length;i++){
         const way = wayList[i] // e.g. "way/1234"
 
-
         const nodeList = [] //store all intersections that lie on way
         const keyList = [] //store the keys corresponding to these nodes
 
         for(let [iKey, obj] of intersections.entries()){
             const waysSet = obj.ways
             if(waysSet.has(way)){
-                //Add intersection to nodeList of way (if not in there yet)
-
-                let includes = false //TODO kind of a bad pattern, maybe improve
-                for(let i=0;i<nodeList.length;i++){
-                    const iCoords = obj.coords
-                    const nodeCoords = nodeList[i]
-                    if(equal2D(iCoords, nodeCoords)){
-                        includes = true
-                        break
-                    }
-                }
-                if(!includes){
-                    nodeList.push(obj.coords)
-                    keyList.push(iKey)
-                }
+                nodeList.push(obj.coords)
+                keyList.push(iKey)
             }
         }
 
@@ -261,38 +243,33 @@ function getLineIntersection(linePoints1, linePoints2, key1, key2, isRoad, isFoo
             
             if(intersection){
                 const iCoords = GPSRelativePosition(intersection, centerCoords)
+                const key = iCoords.toString()
                 if(isRoad){
-                    let didExist = false
-                    for(let [key, existingIntersection] of roadIntersections.entries()){
-                        if(iCoords[0] === existingIntersection.coords[0] && iCoords[1] === existingIntersection.coords[1]){
-                            existingIntersection.ways.add(key1) 
-                            existingIntersection.ways.add(key2)
-                            didExist = true
-                            break
-                        }
+                    const existingIntersection = roadIntersections.get(key) 
+
+                    if(existingIntersection){
+                        existingIntersection.ways.add(key1)
+                        existingIntersection.ways.add(key2)
                     }
-                    if(!didExist){
+                    else{
                         const s = new Set([key1,key2])
-                        roadIntersections.set(numIntersections, {
+                        roadIntersections.set(key, {
                             coords: iCoords,
                             ways: s,
                         })
                     }
                 }
                 if(isFootpath){
-                    let didExist = false
-                    for(let [key, existingIntersection] of footpathIntersections.entries()){
-                        if(iCoords[0] === existingIntersection.coords[0] && iCoords[1] === existingIntersection.coords[1]){
-                            existingIntersection.ways.add(key1)
-                            existingIntersection.ways.add(key2)
-                            didExist = true
-                            break
-                        }
+                    const existingIntersection = footpathIntersections.get(key) 
+
+                    if(existingIntersection){
+                        existingIntersection.ways.add(key1)
+                        existingIntersection.ways.add(key2)
                     }
-                    if(!didExist){
+                    else{
                         const s = new Set([key1,key2])
-                        footpathIntersections.set(numIntersections, {
-                            coords: GPSRelativePosition(intersection, centerCoords),
+                        footpathIntersections.set(key, {
+                            coords: iCoords,
                             ways: s,
                         })
                     }
