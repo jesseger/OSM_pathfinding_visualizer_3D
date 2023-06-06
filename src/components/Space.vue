@@ -345,12 +345,11 @@ export default {
                 }
                 else if(fel.properties["highway"] && fel.geometry.type == "LineString"){
                     let isRoad=false, isFootpath=false
-                    if(!["pedestrian","path","bridleway","cycleway","footway","footway","track"].includes(fel.properties.highway)){
-                        this.addHighway(fel.geometry.coordinates, fel.properties, true)
+                    const highway = fel.properties.highway
+                    if(!["pedestrian","path","bridleway","cycleway","footway","footway","track"].includes(highway)){
                         isRoad=true
                     }
-                    if(!["motorway","bridleway","cycleway"].includes(fel.properties.highway) ){
-                        this.addHighway(fel.geometry.coordinates, fel.properties, false)
+                    if(!["motorway","bridleway","cycleway"].includes(highway) ){
                         isFootpath=true
                     }
                     if(isRoad || isFootpath){
