@@ -26,9 +26,9 @@
                 <span v-if="!roadEdges"> Edges are still loading</span>
             </v-tooltip>
         </div>
-        <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :intersections="intersections" :edges="edges" @sendHighwayData="handleHighwayData" 
-        :centerCoords="centerCoords" :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes"
-        :toggleResetScene="toggleResetScene"/> 
+        <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :footpathIntersections="footpathIntersections" :roadIntersections="roadIntersections" 
+        :footpathEdges="footpathEdges" :roadEdges="roadEdges" :isDataReady="isDataReady" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords" 
+        :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" /> 
     </div>
 </template>
 
@@ -38,6 +38,8 @@ import Space from './Space.vue'
 import AppButton from './Button.vue'
 import { astar } from '../assets/js/astar.js'
 import { bfs } from '../assets/js/bfs'
+
+import { coordStringToArray } from '../assets/js/utils'
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
@@ -103,6 +105,9 @@ export default {
             }
             return null
         },
+        isDataReady(){
+            return this.footpathEdges !== null && this.footpathIntersections !== null
+        },
         isWeightedAlgo(){
             return this.algorithm === 0 || this.algorithm === 1
         },
@@ -159,12 +164,10 @@ export default {
             let gen
             switch (this.algorithm) {
                 case 0:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal)
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
                     break
                 case 1:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal, function(x,y){
-                        return 0
-                    })
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal, (x,y,V) => 0)
                     break
                 case 2:
                     gen = bfs(this.edges, this.selectedStart, this.selectedGoal)
@@ -173,12 +176,14 @@ export default {
                     gen = astar(this.edges, this.selectedStart, this.selectedGoal)
                     break
                 default:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal)
+                    gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
             }
 
             const start = Date.now()
 
+            let i = 0
             for (let data of gen){
+                i++
                 if(!this.isRunning) break
 
                 if(Array.isArray(data)){
@@ -190,6 +195,7 @@ export default {
             }
 
             console.log(`Compute took ${Date.now() - start} ms`)
+            console.log(`and ${i} rendering passes`)
             this.isRunning = false
         },
         handleHighwayData(highwayData){
@@ -207,6 +213,8 @@ export default {
                     this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : null
                     this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
                     this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
+
+                    //if(this.roadIntersections && this.roadEdges) this.isHighwayReady = true //this.isWalkingSelected = false
                 }
             }
             else{
