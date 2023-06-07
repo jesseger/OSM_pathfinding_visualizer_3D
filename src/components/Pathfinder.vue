@@ -255,7 +255,9 @@ export default {
                     this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
                     this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
 
-                    //if(this.roadIntersections && this.roadEdges) this.isHighwayReady = true //this.isWalkingSelected = false
+                    if(e.data.progress){
+                        console.log(e.data.progress)
+                    }
                 }
             }
             else{

@@ -46,9 +46,9 @@ onmessage = (e) => {
  */
 function computeEdges(data, isRoad){
     const intersections = isRoad? roadIntersections : footpathIntersections
+    const wayList = Object.keys(data) 
 
     //Iterate over every way "way"
-    const wayList = Object.keys(data) 
     for(let i=0; i<wayList.length;i++){
         const way = wayList[i] // e.g. "way/1234"
 
@@ -194,6 +194,11 @@ function computeLineIntersections(data){
     let numIntersections = 0
     const keyList = Object.keys(data)
 
+    //Intersection progress bar
+    const totalIterations = keyList.length * (keyList.length - 1) / 2
+    const period = Math.floor(totalIterations / 10)
+    let curIteration = 0
+
     for(let i=0; i<keyList.length;i++){
         const i_key = keyList[i] 
         for(let j=i+1; j<keyList.length;j++){
@@ -207,6 +212,14 @@ function computeLineIntersections(data){
             if(isRoad || isFootpath){
                 numIntersections = getLineIntersection(linePoints1, linePoints2, i_key, j_key, isRoad, isFootpath, numIntersections)
             }
+
+            //Update progress bar
+            if((curIteration + 1) % period === 0){
+                postMessage({
+                    progress: Math.floor((curIteration + 1) / period)
+                })
+            }
+            curIteration++
             
         }
     }
