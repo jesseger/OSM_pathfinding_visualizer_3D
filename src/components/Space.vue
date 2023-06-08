@@ -300,8 +300,8 @@ export default {
             this.controls.minDistance = 1
             this.controls.update()
 
-            this.stats = new Stats()
-            cont.appendChild(this.stats.dom)
+            // this.stats = new Stats()
+            // cont.appendChild(this.stats.dom)
 
             this.MAT_BUILDING = new THREE.MeshPhongMaterial()
 
@@ -327,7 +327,7 @@ export default {
 
             this.renderer.render(this.scene, this.camera)
             this.controls.update()
-            this.stats.update()
+            //this.stats.update()
         },
         /**
          * Fetches GeoJSON file. 
