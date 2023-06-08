@@ -339,7 +339,7 @@ export default {
     position: absolute;
     margin-top: 90vh;
 }
-#select >>> .v-field__overlay{
+#select :deep() .v-field__overlay{
     background-color: white;
     opacity: 0.5;
     outline: 2px solid #ff4d00;

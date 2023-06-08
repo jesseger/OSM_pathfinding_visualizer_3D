@@ -218,7 +218,7 @@ export default {
 .parent{
     text-align: center;
 }
-#window >>> .justify-center {
+#window :deep() .justify-center {
     display: flex;
 }
 
