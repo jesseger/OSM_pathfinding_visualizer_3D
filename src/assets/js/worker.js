@@ -38,6 +38,8 @@ onmessage = (e) => {
         footpathEdges: footpathEdges,
     })
 
+    self.close() //Terminate worker
+
 }
 /**
  * Computes edges of graph, given highway data 
@@ -48,9 +50,14 @@ function computeEdges(data, isRoad){
     const intersections = isRoad? roadIntersections : footpathIntersections
     const wayList = Object.keys(data) 
 
+    //Edges progress bar
+    const totalIterations = wayList.length 
+    const period = Math.floor(totalIterations / 5)
+
+
     //Iterate over every way "way"
-    for(let i=0; i<wayList.length;i++){
-        const way = wayList[i] // e.g. "way/1234"
+    let curIteration=0
+    for(let [way, value] of Object.entries(data)){     
 
         const nodeList = [] //store all intersections that lie on way
         const keyList = [] //store the keys corresponding to these nodes
@@ -63,17 +70,13 @@ function computeEdges(data, isRoad){
             }
         }
 
-        //Derive edges between nodes on way
+        // //Derive edges between nodes on way
         const nodeListLength = nodeList.length
-        if(nodeListLength <2){
-            //  way like -----O or -----
-            continue
-        }
-        else if(nodeListLength == 2){
+        if(nodeListLength == 2){
             //  way like O-----O
             addEdge(nodeList, keyList, isRoad)
         }
-        else{
+        else if(nodeListLength > 2){
             // way like O--O--O--O
             /*
                 Approach: We compute the distance between each pair of nodes. A node in a maximum distance pair must be an "endpoint".
@@ -150,6 +153,20 @@ function computeEdges(data, isRoad){
                 addEdge([coords_i, coords_j],[key_i, key_j], isRoad)
             }
         }
+
+        //Update progress bar
+        if((curIteration + 1) % period === 0){
+            postMessage({
+                progress: 10*(Math.floor((curIteration + 1) / period) + (isRoad? 0 : 5))
+            })
+        }
+        curIteration++
+    }
+
+    if(!isRoad){
+        postMessage({
+            progress: 110 //To end progress bar animation nicely
+        })
     }
 }
 /**
@@ -216,7 +233,7 @@ function computeLineIntersections(data){
             //Update progress bar
             if((curIteration + 1) % period === 0){
                 postMessage({
-                    progress: Math.floor((curIteration + 1) / period)
+                    progress: 10*(Math.floor((curIteration + 1) / period))
                 })
             }
             curIteration++

@@ -45,10 +45,16 @@
                 <br/>
 
                 <div class="centered">
-                    <app-button icon="mdi-map-marker"/>
+                    <v-img 
+                    class="mx-auto"
+                    :width="250"
+                    aspect-ratio="16/9"
+                    cover
+                    src='./assets/tutorial.gif'
+                    ></v-img>
                 </div>
                 <p>
-                    Once the data has been fully loaded, you can select/deselect two points by hovering over an intersection and pressing S (start) or G (goal).
+                    Once the data has been loaded, you can select/deselect two points by hovering over an intersection and pressing <b>S</b> (start) or <b>G</b> (goal).
                 </p>
                 <br/>
 
@@ -123,46 +129,44 @@
             <v-card-title class="justify-center"> Pathfinding  </v-card-title>
             <v-card-subtitle class="justify-center"> Algorithms </v-card-subtitle>
             <v-card-text class="text-center">
-                <p> The problem is simple: find the shortest path from start to goal. However, not all algorithms are made equal.</p>
+                <p class="left"> The problem is simple: find the shortest path from start to goal. However, not all algorithms are made equal.</p>
                 <br>
                 <b>A*</b>
                 <p>
-                <ol>
-                    <li><b>weighted: </b> it considers the length of every edge</li>
-                    <li><b>informed: </b> it knows the location of the goal node</li>
-                    <li><b>optimal, complete: </b> it is guaranteed to find the shortest path</li>
-                </ol>
+                    <b>weighted: </b> it considers the length of every edge<br>
+                    <b>informed: </b> it knows the location of the goal node<br>
+                    <b>optimal, complete: </b> it is guaranteed to find the shortest path<br>
                 </p>
                 <br>
 
                 <b>Dijkstra</b>
                 <p>
-                    <ol>
-                        <li><b>weighted: </b> it considers the length of every edge</li>
-                        <li><b>uninformed: </b> it doesn't know the location of the goal node</li>
-                        <li><b>optimal, complete: </b> it is guaranteed to find the shortest path</li>
-                    </ol>
+                    <b>weighted: </b> it considers the length of every edge<br>
+                    <b>uninformed: </b> it does not know the location of the goal node<br>
+                    <b>optimal, complete: </b> it is guaranteed to find the shortest path<br>
                 </p>
                 <br>
 
                 <b>Greedy Best-First-Search</b>
                 <p>
-                    <ol>
-                        <li><b>weighted: </b> it considers the length of every edge</li>
-                        <li><b>uninformed: </b> it doesn't know the location of the goal node</li>
-                        <li><b>incomplete: </b> it is not guaranteed to find the shortest path</li>
-                        <li><b>not optimal: </b> the path found is not guaranteed to be the shortest</li> 
-                    </ol>
+                    <b>weighted: </b> it considers the length of every edge<br>
+                    <b>informed: </b> it knows the location of the goal node<br>
+                    <b>not optimal, complete: </b> the path found is not guaranteed to be the shortest<br>
                 </p>
                 <br>
 
                 <b>Breadth-First-Search</b>
                 <p>
-                    <ol>
-                        <li><b>unweighted: </b> it considers just the number of edges</li>
-                        <li><b>uninformed: </b> it doesn't know the location of the goal node</li>
-                        <li><b>optimal, complete: </b> it is guaranteed to find the shortest path (wrt. to #edges)</li>
-                    </ol>
+                    <b>unweighted: </b> it considers only the number of edges<br>
+                    <b>uninformed: </b> it does not know the location of the goal node<br>
+                    <b>optimal, complete: </b> it is guaranteed to find the shortest path<br>
+                </p>
+                <br>
+                <p class="left">
+                    <b>For the sake of completeness,</b> we assume that the same node cannot be visited twice. For A* (and thus Dijkstra) this is naturally the case; 
+                    if we find a new path to a visited node, the new f-value will always be equal at best. Otherwise, we would have taken this path to begin with.
+                    <br>
+                    For BFS and Greedy Best-First, we explicitly keep track of visited nodes.
                 </p>
 
             </v-card-text>
@@ -197,7 +201,9 @@ export default {
     position: absolute;
     z-index: 3;
     width: 50%;
+    min-width: 750px;
     height: 80%;
+    min-height: 750px;
     margin-left: 25%;
     margin-top: 5%;
     background-color: #ffffffe3;
@@ -218,5 +224,9 @@ export default {
 
 #git {
     text-align: center;
+}
+
+.left {
+    text-align: left;
 }
 </style>

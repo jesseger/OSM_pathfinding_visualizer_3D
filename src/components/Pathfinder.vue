@@ -1,23 +1,23 @@
 <template>
     <div id="full">
         <div id="gui">
-            <div id="road">
+            <div id="road" class="overlay">
                 <app-button :icon="roadButtonIcon" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClick"
             @walking="handleWalkingClick" @driving="handleDrivingClick" />
             </div>
 
-            <div id="building">
+            <div id="building" class="overlay">
                 <app-button :icon="buildingButtonIcon" @click="handleBuildingButtonClick"></app-button>
             </div>
 
-            <div id="algo">
+            <div id="algo" class="overlay">
                 <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClick"
             @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
             </div>
 
             <v-tooltip :disabled="!isRunDisabled">
                 <template v-slot:activator="{ props }">
-                    <div id="go" v-bind="props">
+                    <div id="go" class="overlay" v-bind="props">
                         <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
                     </div>
                 </template>
@@ -26,7 +26,7 @@
                 <span v-if="!roadEdges"> Edges are still loading</span>
             </v-tooltip>
 
-        <div id="select">
+        <div id="select" class="overlay">
             <v-select
             v-model="animationLabel"
             :items="['None','Normal','Slow']"
@@ -35,13 +35,27 @@
             ></v-select>
         </div>
 
-        <div id="help">
+        <div id="help" class="overlay">
             <app-button icon="mdi-help" @click="handleHelpButtonClick"></app-button>
         </div>
         </div>
 
         <div id="helpWindow" v-if="isHelpButtonOpen">
             <help-page />
+        </div>
+
+        <div id="progress" class="overlay text-center" v-if="isProgressBarVisible">
+            <v-progress-circular
+            :rotate="360"
+            :size="100"
+            :width="15"
+            :model-value="progress"
+            color="primary"
+            >
+            {{ progress }}
+            </v-progress-circular>
+            <br>
+            <span class="unselectable"><b>{{ this.footpathIntersections? "Computing Edges" : "Computing Intersections"}}</b></span>
         </div>
 
         <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :footpathIntersections="footpathIntersections" :roadIntersections="roadIntersections" 
@@ -101,6 +115,7 @@ export default {
             toggleResetScene: false,
             isBuildingsVisible: true,
             isHelpButtonOpen: false,
+            progress: 0,
         }
     },
     computed: {
@@ -144,7 +159,6 @@ export default {
             return "mdi-help"
         },
         animationSpeed(){
-            console.log("Anilabel now: ", this.animationLabel)
             switch(this.animationLabel){
                 case 'None':
                     return null
@@ -155,7 +169,10 @@ export default {
                 default:
                     return 10
             }
-        }
+        },
+        isProgressBarVisible(){
+            return this.progress < 110
+        },
     },
     methods: {
         handleRoadButtonClick(){
@@ -235,8 +252,7 @@ export default {
                 }
             }
 
-            console.log(`Compute took ${Date.now() - start} ms`)
-            console.log(`and ${i} rendering passes`)
+            console.log(`Compute took ${Date.now() - start} ms and ${i} rendering passes`)
             this.isRunning = false
         },
         handleHighwayData(highwayData){
@@ -250,13 +266,13 @@ export default {
                 })
 
                 graphWorker.onmessage = (e) => {
-                    this.roadIntersections = e.data.roadIntersections? e.data.roadIntersections : null
-                    this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : null
-                    this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
-                    this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
+                    this.roadIntersections = e.data.roadIntersections? e.data.roadIntersections : this.roadIntersections
+                    this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : this.footpathIntersections
+                    this.roadEdges = e.data.roadEdges? e.data.roadEdges : this.roadEdges
+                    this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : this.footpathEdges
 
                     if(e.data.progress){
-                        console.log(e.data.progress)
+                        this.progress = e.data.progress
                     }
                 }
             }
@@ -278,6 +294,11 @@ export default {
 
 <style scoped>
 
+.overlay {
+    position: absolute;
+    z-index: 1;
+}
+
 #full {
     position: relative;
 }
@@ -290,17 +311,15 @@ export default {
 
 #road {
     position: absolute;
-    margin-top: 4vh/*4rem*/;
+    margin-top: 4vh;
 }
 
 #building {
-    position: absolute;
-    margin-top: 18vh /*14rem*/;
+    margin-top: 18vh;
 }
 
 #algo {
-    position: absolute;
-    margin-top: 32vh/*24rem*/;
+    margin-top: 32vh;
 }
 
 #go {
@@ -324,6 +343,24 @@ export default {
     background-color: white;
     opacity: 0.5;
     outline: 2px solid #ff4d00;
+}
+
+#progress {
+    position: absolute; 
+    left:50%;
+    top:50%;
+    width: 100px;
+    transform: translate(-50%,-50%);
+    color: #ff4d00;
+}
+
+.unselectable {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 </style>
