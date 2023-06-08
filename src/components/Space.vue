@@ -71,7 +71,6 @@ export default {
 
         //Click s for start, g for goal
         document.addEventListener('keypress', (e)=>{
-            console.log("We in keydown")
             const pointer = {
                 x: ( mouseX / window.innerWidth ) * 2 - 1,
 	            y: - ( mouseY / window.innerHeight ) * 2 + 1,
@@ -498,7 +497,6 @@ export default {
             }
         },
         resetAnimation(){
-            console.log("Reset animation called")
             const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap
             for(let [key, line] of edgesMap.entries()){
                 line.material = this.MAT_EDGE
