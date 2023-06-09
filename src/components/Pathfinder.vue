@@ -260,7 +260,10 @@ export default {
             this.highwayData = highwayData
 
             if(window.Worker){ 
-                const graphWorker = new Worker('src/assets/js/worker.js', {type: "module"},)
+                const graphWorker = new Worker(new URL('/src/assets/js/worker.js', import.meta.url), {
+                    type: 'module',
+                })
+
                 graphWorker.postMessage({
                     highwayData: highwayData,
                     centerCoords: this.centerCoords.toString()
