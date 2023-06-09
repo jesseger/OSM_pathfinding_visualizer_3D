@@ -24,13 +24,17 @@ export default {
             default: () => false
         },
         isBuildingsVisible: Boolean,
-        intersections: Object,
-        edges: Object,
+        roadIntersections: Object,
+        footpathIntersections: Object,
+        roadEdges: Object,
+        footpathEdges: Object,
+        isDataReady: Boolean,
         centerCoords: Array,
         animationData: Array,
         shortestPath: Array,
         isWeightedAlgo: Boolean,
         toggleResetScene: Boolean,
+        isRunning: Boolean,
     },
     data(){
         return{ 
@@ -40,6 +44,8 @@ export default {
             stats: null,
             geos_building: [],
             edgesMap: new Map(),
+            roadEdgesMap: new Map(),
+            footpathEdgesMap: new Map(),
             theme: useTheme(),
         }
     },
@@ -57,115 +63,89 @@ export default {
 
         onWindowResize()
 
-        //when user alt+clicks to select building
-        document.getElementById("cont").addEventListener('click', (e)=>{
-            if(!e.altKey) return
-            const pointer = {
-                x: ( e.clientX / window.innerWidth ) * 2 - 1,
-	            y: - ( e.clientY / window.innerHeight ) * 2 + 1,
-            }
+        var mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', function(e){
+            mouseX = e.pageX
+            mouseY = e.pageY;
+        }, false);
 
+        //Click s for start, g for goal
+        document.addEventListener('keypress', (e)=>{
+            const pointer = {
+                x: ( mouseX / window.innerWidth ) * 2 - 1,
+	            y: - ( mouseY / window.innerHeight ) * 2 + 1,
+            }
             const hitObject = this.FireRaycaster(pointer)
-            if(hitObject){
-                if(!this.selectedStart){
-                    this.selectedStart = hitObject
-                    this.scene.add(hitObject)
-                }
-                else if(!this.selectedGoal){
-                    if(this.selectedStart == hitObject){
+            if(hitObject && !this.isRunning){
+                if(e.key === 's'){
+                    if(hitObject === this.selectedGoal) return
+                    if(!this.selectedStart || this.selectedStart !== hitObject){
+                        this.scene.remove(this.selectedStart)
+                        this.selectedStart = hitObject
+                        this.scene.add(hitObject)
+                    }
+                    else {
                         this.selectedStart = null
                         this.scene.remove(hitObject)
-                    } else{
+                    }
+                }
+                if(e.key === 'g'){
+                    if(hitObject === this.selectedStart) return
+                    if(!this.selectedGoal || this.selectedGoal !== hitObject){
+                        this.scene.remove(this.selectedGoal)
                         this.selectedGoal = hitObject
                         this.scene.add(hitObject)
                     }
-                }
-                else{
-                    if(this.selectedGoal == hitObject){
+                    else {
                         this.selectedGoal = null
                         this.scene.remove(hitObject)
                     }
                 }
+
                 this.updateSelection()
             }
-        })
+            })
     },
     watch : {
-        intersections: {
+        isDataReady: {
             handler(val, oldVal){
-                this.intersection_colliders = []
-                const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
-                
-                for(let stringCoords of this.intersections.keys()){
-                    const coords = GPSRelativePosition(coordStringToArray(stringCoords), this.centerCoords)
-                    const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
-                    geometry.translate(coords[0],0,coords[1])
-                    geometry.rotateZ(Math.PI)
-
-                    const sphere = new THREE.Mesh(geometry, MAT_NODE)
-                    sphere.name = coords.toString()
-
-                    this.intersection_colliders.push(sphere)
+                if(val){
+                    const intersections = this.isPedestrian? this.footpathIntersections : this.roadIntersections
+                    const edges = this.isPedestrian? this.footpathEdges : this.roadEdges
+                    const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap
+                    this.handleIntersectionsChange(intersections)
+                    this.handleEdgesChange(edges, edgesMap, !this.isPedestrian)
                 }
-            },
-            deep: true,
-        },
-        edges: {
-            handler(val, oldVal){
-                
-                const iR_edges = new THREE.Group()
-                iR_edges.name = "edges"
-
-                for(let node1 of this.edges.keys()){
-                    const coords1 = coordStringToArray(node1)
-                    for(let edge of this.edges.get(node1)){
-
-                        const MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) // current: #204A44
-                        const node2 = edge.neighbor 
-                        const coords2 = coordStringToArray(node2)
-
-                        const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
-                        const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
-                        const geometry = new THREE.BufferGeometry().setFromPoints([point1, point2])
-                        geometry.rotateZ(Math.PI)
-
-                        const line = new THREE.Line(geometry, MAT_EDGE)
-                        line.name = [node1,node2].toString()
-                        this.edgesMap.set([node1,node2].toString(), line)
-                        iR_edges.add(line)
-                   	}
-                }       
-                
-                //Remove old edges if they exist
-                const selectedObject = this.scene.getObjectByName("edges");
-                if(selectedObject){
-                    this.scene.remove( selectedObject );
-                }
-                //Add new edges
-                this.scene.add(iR_edges) 
-            
-            },
-            deep: true,
+            }
         },
         isPedestrian: {
             handler(val, oldVal){
-                this.resetSelection()
+                if(val && this.isDataReady){
+                    this.handleIntersectionsChange(this.footpathIntersections)
+                    this.handleEdgesChange(this.footpathEdges, this.footpathEdgesMap, false)
+                    this.resetSelection()
+                }
+                else if(!val && this.isDataReady){
+                    this.handleIntersectionsChange(this.roadIntersections)
+                    this.handleEdgesChange(this.roadEdges, this.roadEdgesMap, true)
+                    this.resetSelection()
+                }
             }
         },
         animationData: {
             handler(val, oldVal){
                 //Add new edge to frontierEdge
-                const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02}) // 0xFFE921 0xffdd80
+                const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap 
 
                 if(val[1]){
-                    const unvisitedEdge = this.edgesMap.get([val[0],val[1]].toString())
-                    unvisitedEdge.computeLineDistances() 
+                    const unvisitedEdge = edgesMap.get([val[0],val[1]].toString())
+                    const MAT_FRONTIER = new THREE.LineDashedMaterial( {color: this.theme.global.current.colors.primary, gapSize: 0.05, dashSize: 0.02})
                     unvisitedEdge.material = MAT_FRONTIER
                 }                
 
                 //Edge that we took to currentNode is now visited
                 if(val[2]){
-                    const selectedEdge = this.edgesMap.get([val[2],val[0]].toString())
+                    const selectedEdge = edgesMap.get([val[2],val[0]].toString())
 
                     let lightness
                     if(this.isWeightedAlgo){
@@ -190,7 +170,9 @@ export default {
                 for(let edge of this.shortestPath){
                     const selectedEdge = this.scene.getObjectByName(edge.toString());
                     const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: this.theme.global.current.colors.secondary} )
-                    selectedEdge.material = MAT_SHORTEST
+                    this.$nextTick(() => {
+                        selectedEdge.material = MAT_SHORTEST
+                    })
                 }
             },
             deep: true,
@@ -212,6 +194,57 @@ export default {
         },
     },
     methods: {
+        handleIntersectionsChange(intersections){
+            this.intersection_colliders = []
+            const MAT_NODE = new THREE.MeshBasicMaterial( { color: this.theme.global.current.colors.secondary } )    
+            
+            for(let intersection of intersections.values()){
+                const coords = intersection.coords
+                const geometry = new THREE.SphereGeometry( 0.1, 13, 13 )
+                geometry.translate(coords[0],0,coords[1])
+                geometry.rotateZ(Math.PI)
+
+                const sphere = new THREE.Mesh(geometry, MAT_NODE)
+                sphere.name = coords.toString()
+
+                this.intersection_colliders.push(sphere)
+            }
+        },
+        handleEdgesChange(edges, edgesMap, isRoad){
+            const iR_edges = new THREE.Group()
+            iR_edges.name = "edges"
+
+            const intersections = isRoad? this.roadIntersections : this.footpathIntersections
+
+            for(let node1 of edges.keys()){
+                const coords1 = intersections.get(node1).coords 
+                for(let edge of edges.get(node1)){
+
+                    const node2 = edge.neighbor 
+                    const coords2 = intersections.get(node2).coords
+
+                    const point1 = new THREE.Vector3(coords1[0],0,coords1[1])
+                    const point2 = new THREE.Vector3(coords2[0],0,coords2[1])
+                    const geometry = new THREE.BufferGeometry().setFromPoints([point1, point2])
+                    geometry.rotateZ(Math.PI)
+
+                    const line = new THREE.Line(geometry, this.MAT_EDGE)
+                    const lineName = [node1,node2].toString()
+                    line.name = lineName
+                    line.computeLineDistances()
+                    edgesMap.set(lineName, line) 
+                    iR_edges.add(line)
+                }
+            }       
+            
+            //Remove old edges if they exist
+            const selectedObject = this.scene.getObjectByName("edges");
+            if(selectedObject){
+                this.scene.remove( selectedObject );
+            }
+            //Add new edges
+            this.scene.add(iR_edges) 
+        },
         Awake(){
             let cont = document.getElementById("cont")
             
@@ -251,9 +284,6 @@ export default {
             this.scene.add(light1)
             this.scene.add(light2)
 
-            //const gridHelper = new THREE.GridHelper(60, 150, new THREE.Color(0x555555), new THREE.Color(0x333333))
-            //this.scene.add(gridHelper)
-
             //init renderer
             this.renderer = new THREE.WebGLRenderer({antialias: true})
             this.renderer.setPixelRatio(window.devicePixelRatio)
@@ -272,8 +302,8 @@ export default {
             this.controls.minDistance = 1
             this.controls.update()
 
-            this.stats = new Stats()
-            cont.appendChild(this.stats.dom)
+            // this.stats = new Stats()
+            // cont.appendChild(this.stats.dom)
 
             this.MAT_BUILDING = new THREE.MeshPhongMaterial()
 
@@ -287,6 +317,9 @@ export default {
             this.selectedStart = null
             this.selectedGoal = null
 
+            //Animation
+            this.MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']}) 
+
             this.Update()
 
             this.GetGeoJson()
@@ -296,13 +329,13 @@ export default {
 
             this.renderer.render(this.scene, this.camera)
             this.controls.update()
-            this.stats.update()
+            //this.stats.update()
         },
         /**
          * Fetches GeoJSON file. 
          */
         GetGeoJson(){
-            fetch('./assets/aachen_zentrum_buildings_highways.geojson').then((res)=>{
+            fetch('./assets/buildings_highways.geojson').then((res)=>{
                 res.json().then((data)=>{
                     this.LoadGeoData(data)
                 })
@@ -325,12 +358,11 @@ export default {
                 }
                 else if(fel.properties["highway"] && fel.geometry.type == "LineString"){
                     let isRoad=false, isFootpath=false
-                    if(!["pedestrian","path","bridleway","cycleway","footway","footway","track"].includes(fel.properties.highway)){
-                        this.addHighway(fel.geometry.coordinates, fel.properties, true)
+                    const highway = fel.properties.highway
+                    if(!["pedestrian","path","bridleway","cycleway","footway","footway","track"].includes(highway)){
                         isRoad=true
                     }
-                    if(!["motorway","bridleway","cycleway"].includes(fel.properties.highway) ){
-                        this.addHighway(fel.geometry.coordinates, fel.properties, false)
+                    if(!["motorway","bridleway","cycleway"].includes(highway) ){
                         isFootpath=true
                     }
                     if(isRoad || isFootpath){
@@ -467,9 +499,12 @@ export default {
             }
         },
         resetAnimation(){
-            console.log("Reset animation called")
-            for(let [key, line] of this.edgesMap.entries()){
-                line.material = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']})
+            const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap
+            for(let [key, line] of edgesMap.entries()){
+                const MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']})
+                this.$nextTick(() => {
+                    line.material = MAT_EDGE
+                })
             }
         },
         resetSelection(){

@@ -8,6 +8,8 @@ var footpathEdges = new Map()
 
 var centerCoords = null 
 
+const equal2D = (arr1, arr2) => arr1[0] === arr2[0] && arr1[1] === arr2[1] 
+
 /**
  * Computes graph (nodes and edges) from highway data in a background process
  * @param {object} e Event. e.data has format {centerCoords: string, highwayData: map}
@@ -35,6 +37,9 @@ onmessage = (e) => {
         roadEdges: roadEdges,
         footpathEdges: footpathEdges,
     })
+
+    self.close() //Terminate worker
+
 }
 /**
  * Computes edges of graph, given highway data 
@@ -43,57 +48,54 @@ onmessage = (e) => {
  */
 function computeEdges(data, isRoad){
     const intersections = isRoad? roadIntersections : footpathIntersections
+    const wayList = Object.keys(data) 
+
+    //Edges progress bar
+    const totalIterations = wayList.length 
+    const period = Math.floor(totalIterations / 5)
+
 
     //Iterate over every way "way"
-    const keyList = Object.keys(data) 
-    for(let i=0; i<keyList.length;i++){
-        const way = keyList[i] // e.g. "way/1234"
-        const s = new Set()
+    let curIteration=0
+    for(let [way, value] of Object.entries(data)){     
 
-        //Store all the nodes intersecting with way in s
-        for(let [stringCoords, waysSet] of intersections.entries()){
+        const nodeList = [] //store all intersections that lie on way
+        const keyList = [] //store the keys corresponding to these nodes
+
+        for(let [iKey, obj] of intersections.entries()){
+            const waysSet = obj.ways
             if(waysSet.has(way)){
-                s.add(stringCoords)
+                nodeList.push(obj.coords)
+                keyList.push(iKey)
             }
         }
 
-        //Derive edges between nodes on way
-        const setSize = s.size
-        if(setSize <2){
-            //  way like -----O or -----
-            continue
-        }
-        else if(setSize == 2){
+        // //Derive edges between nodes on way
+        const nodeListLength = nodeList.length
+        if(nodeListLength == 2){
             //  way like O-----O
-            addEdge([...s], isRoad)
+            addEdge(nodeList, keyList, isRoad)
         }
-        else{
+        else if(nodeListLength > 2){
             // way like O--O--O--O
             /*
                 Approach: We compute the distance between each pair of nodes. A node in a maximum distance pair must be an "endpoint".
                 Then we sort the nodes by distance to this endpoint. Create edge (n_i, n_i+1) for successive nodes in this sorted list.
             */
             let distances = []
-            for(let i=0;i<setSize;i++){
-                for(let j=i+1;j<setSize;j++){
-                    const node1 = [...s][i]
-                    const node2 = [...s][j]
-
-                    if(node1 === node2){
-                        continue
-                    }
-                    
-                    const longLatCoords1 = coordStringToArray(node1)
-                    const longLatCoords2 = coordStringToArray(node2)
-                    const coords1 = GPSRelativePosition(longLatCoords1, centerCoords)
-                    const coords2 = GPSRelativePosition(longLatCoords2, centerCoords)
+            for(let i=0;i<nodeListLength;i++){
+                for(let j=i+1;j<nodeListLength;j++){
+                    const coords1 = nodeList[i] 
+                    const coords2 = nodeList[j]
 
                     const squaredDist =  (coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2
 
                     distances.push({
                         dist: squaredDist,
-                        node1: node1,
-                        node2: node2,
+                        coords1: coords1,
+                        coords2: coords2,
+                        key1: keyList[i],
+                        key2: keyList[j],
                     })  
                 }
             }
@@ -103,62 +105,100 @@ function computeEdges(data, isRoad){
                 return a.dist > b.dist ? 1 : -1
             })
 
-            const start = distances[distances.length-1].node1
+
+            const start = distances[distances.length-1] //start.coords1 is our reference endpoint
 
             //Pairs that do not contain endpoint are irrelevant
             distances = distances.map((obj) => {
-                return (obj.node1 == start || obj.node2 == start)? obj : undefined
+                return equal2D(obj.coords1, start.coords1) || equal2D(obj.coords2, start.coords1)? obj : undefined
             })
 
             distances.sort((a,b) => {
                 return a.dist > b.dist ? 1 : -1
             })
 
-            const node_0 = distances[0].node1 === start? distances[0].node2 : distances[0].node1
-            addEdge([start, node_0], isRoad)
-            for(let i=0;i<setSize-2;i++){
-                const j = i+1
-                const node_i = distances[i].node1 === start? distances[i].node2 : distances[i].node1
-                const node_j = distances[j].node1 === start? distances[j].node2 : distances[j].node1
+            let node_0_coords, node_0_key
+            if(equal2D(distances[0].coords1, start.coords1)){
+                node_0_coords = distances[0].coords2
+                node_0_key = distances[0].key2
+            }
+            else{
+                node_0_coords = distances[0].coords1
+                node_0_key = distances[0].key1
+            }
 
-                addEdge([node_i, node_j], isRoad)
+            addEdge([start.coords1, node_0_coords], [start.key1, node_0_key], isRoad)
+
+            for(let i=0;i<nodeListLength-2;i++){
+                const j = i+1
+                let coords_i,key_i
+                if(equal2D(distances[i].coords1, start.coords1)){
+                    coords_i = distances[i].coords2
+                    key_i = distances[i].key2
+                }
+                else{
+                    coords_i = distances[i].coords1
+                    key_i = distances[i].key1
+                }
+                let coords_j,key_j
+                if(equal2D(distances[j].coords1, start.coords1)){
+                    coords_j = distances[j].coords2
+                    key_j = distances[j].key2
+                }
+                else{
+                    coords_j = distances[j].coords1
+                    key_j = distances[j].key1
+                }
+
+                addEdge([coords_i, coords_j],[key_i, key_j], isRoad)
             }
         }
+
+        //Update progress bar
+        if((curIteration + 1) % period === 0){
+            postMessage({
+                progress: 10*(Math.floor((curIteration + 1) / period) + (isRoad? 0 : 5))
+            })
+        }
+        curIteration++
+    }
+
+    if(!isRoad){
+        postMessage({
+            progress: 110 //To end progress bar animation nicely
+        })
     }
 }
 /**
  * 
- * @param {string} node1 "x,y" coordinates of node 1
- * @param {string} node2 "x,y" coordinates of node 2
+ * @param {string} coords1 [x,y] world coordinates of node 1
+ * @param {string} coords2 [x,y] world coordinates of node 2
+ * @param {int} key1 key of node 1 in intersection sets
+ * @param {int} key2 key of node 2 in intersection sets
  * @param {boolean} isRoad Whether edge belongs to a road or a footpath
  */
-function addEdge([node1,node2], isRoad){
+function addEdge([coords1,coords2], [key1,key2], isRoad){
     const edgesMap = isRoad ? roadEdges : footpathEdges
-
-    const longLatCoords1 = coordStringToArray(node1)
-    const longLatCoords2 = coordStringToArray(node2)
-    const coords1 = GPSRelativePosition(longLatCoords1, centerCoords)
-    const coords2 = GPSRelativePosition(longLatCoords2, centerCoords)
 
     //sqrt is relevant for pathfinding
     const dist = Math.sqrt((coords1[0] - coords2[0]) ** 2 + (coords1[1] - coords2[1]) ** 2)
 
     //Store edges as "undirected" so we can get list of adjacent nodes in O(1)
-    const node1Edges = edgesMap.get(coords1.toString())
-    const node2Edges = edgesMap.get(coords2.toString())
+    const node1Edges = edgesMap.get(key1)
+    const node2Edges = edgesMap.get(key2)
 
     if(!node1Edges){
-        edgesMap.set(coords1.toString(), [{dist: dist, neighbor: coords2.toString()}])
+        edgesMap.set(key1, [{dist: dist, neighbor: key2}])
     }
     else {
-        node1Edges.push({dist: dist, neighbor: coords2.toString()})
+        node1Edges.push({dist: dist, neighbor: key2})
     }
 
     if(!node2Edges){
-        edgesMap.set(coords2.toString(), [{dist: dist, neighbor: coords1.toString()}])
+        edgesMap.set(key2, [{dist: dist, neighbor: key1}])
     }
     else {
-        node2Edges.push({dist: dist, neighbor: coords1.toString()})
+        node2Edges.push({dist: dist, neighbor: key1})
     }
 }
 /**
@@ -170,6 +210,11 @@ function computeLineIntersections(data){
 
     let numIntersections = 0
     const keyList = Object.keys(data)
+
+    //Intersection progress bar
+    const totalIterations = keyList.length * (keyList.length - 1) / 2
+    const period = Math.floor(totalIterations / 10)
+    let curIteration = 0
 
     for(let i=0; i<keyList.length;i++){
         const i_key = keyList[i] 
@@ -184,6 +229,14 @@ function computeLineIntersections(data){
             if(isRoad || isFootpath){
                 numIntersections = getLineIntersection(linePoints1, linePoints2, i_key, j_key, isRoad, isFootpath, numIntersections)
             }
+
+            //Update progress bar
+            if((curIteration + 1) % period === 0){
+                postMessage({
+                    progress: 10*(Math.floor((curIteration + 1) / period))
+                })
+            }
+            curIteration++
             
         }
     }
@@ -219,31 +272,36 @@ function getLineIntersection(linePoints1, linePoints2, key1, key2, isRoad, isFoo
             const intersection = getLineSegmentIntersection(A_x,A_z,B_x,B_z,C_x,C_z,D_x,D_z)
             
             if(intersection){
+                const iCoords = GPSRelativePosition(intersection, centerCoords)
+                const key = iCoords.toString()
                 if(isRoad){
-                    const intersectingRoadsSet = roadIntersections.get(intersection.toString())
-                    if(!intersectingRoadsSet){
-                        //If this point is new, make a new Set of ways for it
-                        const s = new Set([key1,key2])
-                        roadIntersections.set(intersection.toString(),s)
-                        
+                    const existingIntersection = roadIntersections.get(key) 
+
+                    if(existingIntersection){
+                        existingIntersection.ways.add(key1)
+                        existingIntersection.ways.add(key2)
                     }
                     else{
-                        //Add both IDs to this point's Set of ways
-                        intersectingRoadsSet.add(key1)
-                        intersectingRoadsSet.add(key2)
+                        const s = new Set([key1,key2])
+                        roadIntersections.set(key, {
+                            coords: iCoords,
+                            ways: s,
+                        })
                     }
                 }
                 if(isFootpath){
-                    const intersectingFootpathsSet = footpathIntersections.get(intersection.toString())
-                    if(!intersectingFootpathsSet){
-                        //If this point is new, make a new Set of ways for it
-                        const s = new Set([key1,key2])
-                        footpathIntersections.set(intersection.toString(),s)
+                    const existingIntersection = footpathIntersections.get(key) 
+
+                    if(existingIntersection){
+                        existingIntersection.ways.add(key1)
+                        existingIntersection.ways.add(key2)
                     }
                     else{
-                        //Add both IDs to this point's Set of ways
-                        intersectingFootpathsSet.add(key1)
-                        intersectingFootpathsSet.add(key2)
+                        const s = new Set([key1,key2])
+                        footpathIntersections.set(key, {
+                            coords: iCoords,
+                            ways: s,
+                        })
                     }
                 }
                 numIntersections++ 
