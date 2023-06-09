@@ -6,6 +6,7 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  base: '/OSM_pathfinding_visualizer_3D/',
   plugins: [vue(), vueJsx()],
   resolve: {
     alias: {
