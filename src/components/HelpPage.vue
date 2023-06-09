@@ -164,9 +164,9 @@
                 <br>
                 <p class="left">
                     <b>For the sake of completeness,</b> we assume that the same node cannot be visited twice. For A* (and thus Dijkstra) this is naturally the case; 
-                    if we find a new path to a visited node, the new f-value will always be equal at best. Otherwise, we would have taken this path to begin with.
+                    if we find a new path to a visited node, the new f-value will always be equal at best (<i>given a consistent heuristic</i>). Otherwise, we would have taken this path to begin with.
                     <br>
-                    For BFS and Greedy Best-First, we explicitly keep track of visited nodes.
+                    For BFS and Greedy Best-First, we have to explicitly prevent adding visited nodes to the open list.
                 </p>
 
             </v-card-text>
