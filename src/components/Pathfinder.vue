@@ -1,34 +1,67 @@
 <template>
     <div id="full">
         <div id="gui">
-            <div id="road">
-                <app-button :icon="roadButtonIcon" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClicked"
+            <div id="road" class="overlay">
+                <app-button :icon="roadButtonIcon" :isOpen="isRoadButtonOpen" :secondaryButtonList="roadButtons" @click="handleRoadButtonClick"
             @walking="handleWalkingClick" @driving="handleDrivingClick" />
             </div>
 
-            <div id="building">
-                <app-button :icon="buildingButtonIcon" @click="handleBuildingButtonClicked"></app-button>
+            <div id="building" class="overlay">
+                <app-button :icon="buildingButtonIcon" @click="handleBuildingButtonClick"></app-button>
             </div>
 
-            <div id="algo">
-                <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClicked"
+            <div id="algo" class="overlay">
+                <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClick"
             @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
             </div>
 
             <v-tooltip :disabled="!isRunDisabled">
                 <template v-slot:activator="{ props }">
-                    <div id="go" v-bind="props">
+                    <div id="go" class="overlay" v-bind="props">
                         <app-button :icon="goButtonIcon" :isOpen="false" :isDisabled="isRunDisabled" @click="handleComputeClick" isPrimary="true"/> 
                     </div>
                 </template>
-                <span v-if="!selectedStart"> Select a start node with ALT + click <br/></span>
-                <span v-if="!selectedGoal"> Select an end node with ALT + click <br/></span>
+                <span v-if="!selectedStart"> Select a start node with S <br/></span>
+                <span v-if="!selectedGoal"> Select a goal node with G <br/></span>
                 <span v-if="!roadEdges"> Edges are still loading</span>
             </v-tooltip>
+
+        <div id="select" class="overlay">
+            <v-select
+            v-model="animationLabel"
+            :items="['None','Normal','Slow']"
+            label="Animation"
+            density="compact"
+            ></v-select>
         </div>
+
+        <div id="help" class="overlay">
+            <app-button icon="mdi-help" @click="handleHelpButtonClick"></app-button>
+        </div>
+        </div>
+
+        <div id="helpWindow" v-if="isHelpButtonOpen">
+            <help-page />
+        </div>
+
+        <div id="progress" class="overlay text-center" v-if="isProgressBarVisible">
+            <v-progress-circular
+            :rotate="360"
+            :size="100"
+            :width="15"
+            :model-value="progress"
+            color="primary"
+            >
+            {{ progress }}
+            </v-progress-circular>
+            <br>
+            <span class="unselectable"><b>{{ this.footpathIntersections? "Computing Edges" : "Computing Intersections"}}</b></span>
+        </div>
+
         <space :isPedestrian="isWalkingSelected" :isBuildingsVisible="isBuildingsVisible" :footpathIntersections="footpathIntersections" :roadIntersections="roadIntersections" 
         :footpathEdges="footpathEdges" :roadEdges="roadEdges" :isDataReady="isDataReady" @sendHighwayData="handleHighwayData" :centerCoords="centerCoords" 
-        :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" /> 
+        :isWeightedAlgo="isWeightedAlgo" :animationData="animationData" :shortestPath="shortestPath" @sendSelectedNodes="handleSelectedNodes" :toggleResetScene="toggleResetScene" 
+        :isRunning="isRunning"/> 
     </div>
 </template>
 
@@ -36,10 +69,9 @@
 
 import Space from './Space.vue'
 import AppButton from './Button.vue'
+import HelpPage from './HelpPage.vue'
 import { astar } from '../assets/js/astar.js'
 import { bfs } from '../assets/js/bfs'
-
-import { coordStringToArray } from '../assets/js/utils'
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
@@ -48,6 +80,7 @@ export default {
     components: {
         Space,
         AppButton,
+        HelpPage
     },
     data(){
         let roadButtons = []
@@ -74,13 +107,15 @@ export default {
             roadEdges: null,
             footpathEdges: null,
             animationData: null,
-            animationSpeed: 0,
+            animationLabel: 'Normal',
             shortestPath: null,
             selectedStart: null,
             selectedGoal: null,
             isRunning: false,
             toggleResetScene: false,
             isBuildingsVisible: true,
+            isHelpButtonOpen: false,
+            progress: 0,
         }
     },
     computed: {
@@ -120,12 +155,30 @@ export default {
         buildingButtonIcon(){
             return this.isBuildingsVisible? "mdi-office-building-remove" : "mdi-office-building-plus"
         },
+        helpButtonIcon(){
+            return "mdi-help"
+        },
+        animationSpeed(){
+            switch(this.animationLabel){
+                case 'None':
+                    return null
+                case 'Normal':
+                    return 10
+                case 'Slow': 
+                    return 1000
+                default:
+                    return 10
+            }
+        },
+        isProgressBarVisible(){
+            return this.progress < 110
+        },
     },
     methods: {
-        handleRoadButtonClicked(){
+        handleRoadButtonClick(){
             this.isRoadButtonOpen = !this.isRoadButtonOpen
         },
-        handleAlgoButtonClicked(){
+        handleAlgoButtonClick(){
             this.isAlgoButtonOpen = !this.isAlgoButtonOpen
         },
         handleWalkingClick(){
@@ -136,7 +189,7 @@ export default {
             this.isWalkingSelected = false
             this.isRunning = false
         },
-        handleBuildingButtonClicked(){
+        handleBuildingButtonClick(){
             this.isBuildingsVisible = !this.isBuildingsVisible
         },
         handleAStarClick(){
@@ -150,6 +203,9 @@ export default {
         },
         handleDFSClick(){
             this.algorithm = 3
+        },
+        handleHelpButtonClick(){
+            this.isHelpButtonOpen = !this.isHelpButtonOpen
         },
         async handleComputeClick(){
             if(this.isRunDisabled) return
@@ -191,11 +247,12 @@ export default {
                 } else{
                     this.shortestPath = data.success? data.path : []
                 }        
-                await timer(this.animationSpeed)
+                if(this.animationSpeed){
+                    await timer(this.animationSpeed)
+                }
             }
 
-            console.log(`Compute took ${Date.now() - start} ms`)
-            console.log(`and ${i} rendering passes`)
+            console.log(`Compute took ${Date.now() - start} ms and ${i} rendering passes`)
             this.isRunning = false
         },
         handleHighwayData(highwayData){
@@ -209,12 +266,14 @@ export default {
                 })
 
                 graphWorker.onmessage = (e) => {
-                    this.roadIntersections = e.data.roadIntersections? e.data.roadIntersections : null
-                    this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : null
-                    this.roadEdges = e.data.roadEdges? e.data.roadEdges : null
-                    this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : null
+                    this.roadIntersections = e.data.roadIntersections? e.data.roadIntersections : this.roadIntersections
+                    this.footpathIntersections = e.data.footpathIntersections? e.data.footpathIntersections : this.footpathIntersections
+                    this.roadEdges = e.data.roadEdges? e.data.roadEdges : this.roadEdges
+                    this.footpathEdges = e.data.footpathEdges? e.data.footpathEdges : this.footpathEdges
 
-                    //if(this.roadIntersections && this.roadEdges) this.isHighwayReady = true //this.isWalkingSelected = false
+                    if(e.data.progress){
+                        this.progress = e.data.progress
+                    }
                 }
             }
             else{
@@ -235,6 +294,11 @@ export default {
 
 <style scoped>
 
+.overlay {
+    position: absolute;
+    z-index: 1;
+}
+
 #full {
     position: relative;
 }
@@ -247,22 +311,56 @@ export default {
 
 #road {
     position: absolute;
-    margin-top: 4rem;
+    margin-top: 4vh;
 }
 
 #building {
-    position: absolute;
-    margin-top: 14rem;
+    margin-top: 18vh;
 }
 
 #algo {
-    position: absolute;
-    margin-top: 24rem;
+    margin-top: 32vh;
 }
 
 #go {
     position: absolute;
-    margin-top: 34rem;
+    margin-top: 46vh;
 } 
+
+#select {
+    position: absolute;
+    margin-top: 54vh;
+    margin-left: -30px;
+    width: 120px;
+    color: #ff4d00;   
+}
+
+#help {
+    position: absolute;
+    margin-top: 90vh;
+}
+#select :deep() .v-field__overlay{
+    background-color: white;
+    opacity: 0.5;
+    outline: 2px solid #ff4d00;
+}
+
+#progress {
+    position: absolute; 
+    left:50%;
+    top:50%;
+    width: 100px;
+    transform: translate(-50%,-50%);
+    color: #ff4d00;
+}
+
+.unselectable {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
 
 </style>

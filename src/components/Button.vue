@@ -66,9 +66,9 @@ export default {
     flex:1;
 }
 
-.v-btn--variant-outlined {
-    background: rgba(255, 255, 255, 0.521);
+.v-btn--variant-outlined{
+    background: rgba(255, 255, 255, 0.5);
     color: #ff4d00;
+    outline-width: 2px;
 }
-
 </style>
