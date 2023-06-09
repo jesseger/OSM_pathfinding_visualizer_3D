@@ -12,7 +12,7 @@
 
             <div id="algo" class="overlay">
                 <app-button icon="mdi-magnify" :isOpen="isAlgoButtonOpen" :secondaryButtonList="algoButtons" @click="handleAlgoButtonClick"
-            @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @dfs="handleDFSClick"/>
+            @a-star="handleAStarClick" @dijkstra="handleDijkstraClick" @bfs="handleBFSClick" @greedy="handleGreedyClick"/>
             </div>
 
             <v-tooltip :disabled="!isRunDisabled">
@@ -72,6 +72,7 @@ import AppButton from './Button.vue'
 import HelpPage from './HelpPage.vue'
 import { astar } from '../assets/js/astar.js'
 import { bfs } from '../assets/js/bfs'
+import { greedy } from '../assets/js/greedy'
 
 const timer = ms => new Promise(res => setTimeout(res, ms))
 
@@ -90,7 +91,7 @@ export default {
         let algoButtons = []
         algoButtons.push({id:'a-star', text: "A*"})
         algoButtons.push({id:'bfs', text: "BFS"})
-        algoButtons.push({id:'dfs',text: "DFS"})
+        algoButtons.push({id:'greedy',text: "Greedy"})
         algoButtons.push({id:'dijkstra',text: "Dijkstra"})
         
         return {
@@ -201,7 +202,7 @@ export default {
         handleBFSClick(){
             this.algorithm = 2
         },
-        handleDFSClick(){
+        handleGreedyClick(){
             this.algorithm = 3
         },
         handleHelpButtonClick(){
@@ -229,7 +230,7 @@ export default {
                     gen = bfs(this.edges, this.selectedStart, this.selectedGoal)
                     break
                 case 3:
-                    gen = astar(this.edges, this.selectedStart, this.selectedGoal)
+                    gen = greedy(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
                     break
                 default:
                     gen = astar(this.intersections, this.edges, this.selectedStart, this.selectedGoal)
