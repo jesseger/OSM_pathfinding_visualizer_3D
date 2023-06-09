@@ -335,7 +335,7 @@ export default {
          * Fetches GeoJSON file. 
          */
         GetGeoJson(){
-            fetch('./assets/aachen_zentrum_buildings_highways.geojson').then((res)=>{
+            fetch('./assets/buildings_highways.geojson').then((res)=>{
                 res.json().then((data)=>{
                     this.LoadGeoData(data)
                 })
