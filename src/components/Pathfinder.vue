@@ -246,7 +246,7 @@ export default {
                 if(Array.isArray(data)){
                     this.animationData = data  
                 } else{
-                    this.shortestPath = data.success? data.path : []
+                    this.shortestPath = data.success? data.path : this.shortestPath
                 }        
                 if(this.animationSpeed){
                     await timer(this.animationSpeed)

@@ -39,7 +39,7 @@ export function* astar(V, E, start, goal, heuristic=directDistance){
         for(let outgoingEdge of E.get(currentNode)){
             const neighbor = outgoingEdge.neighbor
 
-            const newG = g.get(currentNode) + outgoingEdge.dist
+            const newG = g.get(currentNode) + outgoingEdge.dist 
 
             if(!g.has(neighbor) || newG < g.get(neighbor)){
                 prev.set(neighbor, currentNode)
@@ -67,8 +67,6 @@ export function* astar(V, E, start, goal, heuristic=directDistance){
 function directDistance(node1, node2, V){
     const [x1,y1] = V.get(node1).coords
     const [x2,y2] = V.get(node2).coords
-    
-    // const [x1,y1] = coordStringToArray(stringCoords1)
-    // const [x2,y2] = coordStringToArray(stringCoords2)
+
     return Math.sqrt((x1-x2)**2 + (y1-y2)**2)
 }

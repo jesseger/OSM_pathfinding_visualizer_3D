@@ -170,7 +170,9 @@ export default {
                 for(let edge of this.shortestPath){
                     const selectedEdge = this.scene.getObjectByName(edge.toString());
                     const MAT_SHORTEST = new THREE.LineBasicMaterial( {linewidth: 1, color: this.theme.global.current.colors.secondary} )
-                    selectedEdge.material = MAT_SHORTEST
+                    this.$nextTick(() => {
+                        selectedEdge.material = MAT_SHORTEST
+                    })
                 }
             },
             deep: true,
@@ -499,7 +501,10 @@ export default {
         resetAnimation(){
             const edgesMap = this.isPedestrian? this.footpathEdgesMap : this.roadEdgesMap
             for(let [key, line] of edgesMap.entries()){
-                line.material = this.MAT_EDGE
+                const MAT_EDGE = new THREE.LineBasicMaterial({ color: this.theme.global.current.colors['secondary-darken-2']})
+                this.$nextTick(() => {
+                    line.material = MAT_EDGE
+                })
             }
         },
         resetSelection(){
